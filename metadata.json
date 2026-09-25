@@ -1,0 +1,6 @@
+{
+  "name": "WEBSCANNER",
+  "description": "Deep website vulnerability scanner and OSINT analyzer providing comprehensive flaw reports, SSL/DNS auditing, security headers inspection, tech fingerprinting, and exportable PDF audit reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
