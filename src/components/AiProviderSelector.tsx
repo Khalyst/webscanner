@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   Zap,
+  X,
 } from 'lucide-react';
 import type { AiProviderId, AiProviderInfo, CustomAiConfig } from '../types/scanner';
 
@@ -210,13 +211,18 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Focus search input when opened
+  // Focus search input and lock body scroll when opened
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
       setTimeout(() => searchInputRef.current?.focus(), 80);
     } else {
+      document.body.style.overflow = '';
       setSearchQuery('');
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   const activeProviderInfo = providers.find((p) => p.id === selectedProvider) || providers[0];
@@ -310,58 +316,81 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
         <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Rolling Dropdown Menu */}
+      {/* Rolling Dropdown Menu replaced with Centered Responsive Dialog Modal */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-84 sm:w-104 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-100 max-h-[85vh] flex flex-col">
-          {/* Header */}
-          <div className="px-2.5 pt-1 pb-2 border-b border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-                <Bot className="w-4 h-4 text-cyan-400" />
-                <span>AI-Agnostic Intelligence Engine</span>
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/40 text-cyan-300">
-                Any Model
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-              Choose from built-in models or freely write your own AI provider, endpoint, and model ID.
-            </p>
-
-            {/* Search & Write Input */}
-            <div className="mt-2.5 relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search or type any AI provider / model..."
-                className="w-full bg-slate-950 text-slate-100 placeholder:text-slate-500 text-xs font-mono pl-8 pr-3 py-1.5 rounded-lg border border-slate-700/80 focus:outline-none focus:border-cyan-400 transition-colors"
-              />
-            </div>
-
-            {/* Quick Action when typing custom provider */}
-            {searchQuery.trim() && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCustomName(searchQuery.trim());
-                  handleApplyCustomProvider(searchQuery.trim(), customBaseUrl, customModelInput, customApiKey);
-                  setSearchQuery('');
-                }}
-                className="mt-2 w-full px-2.5 py-1.5 rounded-lg bg-amber-950/40 border border-amber-800/50 hover:bg-amber-900/40 text-amber-300 text-xs font-mono flex items-center justify-between transition-colors text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span className="truncate">Use as custom provider: <strong>&ldquo;{searchQuery.trim()}&rdquo;</strong></span>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-lg sm:max-w-xl rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-3 sm:p-4 z-50 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-1.5 pt-1 pb-3 border-b border-slate-800 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-950/70 border border-cyan-800/50 flex items-center justify-center text-cyan-400 shrink-0">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-slate-100 flex items-center gap-2">
+                      <span>AI Intelligence Engine</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60 text-cyan-300">
+                        Any Model
+                      </span>
+                    </h3>
+                  </div>
                 </div>
-                <span className="text-[10px] uppercase font-bold text-amber-400 bg-amber-900/60 px-1.5 py-0.5 rounded border border-amber-700/60 shrink-0 ml-1">
-                  Select
-                </span>
-              </button>
-            )}
-          </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  aria-label="Close dialog"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Choose from built-in models or freely write your own AI provider, endpoint, and model ID.
+              </p>
+
+              {/* Search & Write Input */}
+              <div className="mt-2.5 relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search or type any AI provider / model..."
+                  className="w-full bg-slate-950 text-slate-100 placeholder:text-slate-500 text-xs font-mono pl-8 pr-3 py-2 rounded-lg border border-slate-700/80 focus:outline-none focus:border-cyan-400 transition-colors"
+                />
+              </div>
+
+              {/* Quick Action when typing custom provider */}
+              {searchQuery.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomName(searchQuery.trim());
+                    handleApplyCustomProvider(searchQuery.trim(), customBaseUrl, customModelInput, customApiKey);
+                    setSearchQuery('');
+                  }}
+                  className="mt-2 w-full px-2.5 py-1.5 rounded-lg bg-amber-950/40 border border-amber-800/50 hover:bg-amber-900/40 text-amber-300 text-xs font-mono flex items-center justify-between transition-colors text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="truncate">Use as custom provider: <strong>&ldquo;{searchQuery.trim()}&rdquo;</strong></span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold text-amber-400 bg-amber-900/60 px-1.5 py-0.5 rounded border border-amber-700/60 shrink-0 ml-1">
+                    Select
+                  </span>
+                </button>
+              )}
+            </div>
 
           {/* Providers List */}
           <div className="overflow-y-auto divide-y divide-slate-800/60 p-1 space-y-1 flex-1 pr-1">
@@ -643,21 +672,23 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
           </div>
 
           {/* Footer Note */}
-          <div className="p-2 border-t border-slate-800 text-[10px] text-slate-400 font-mono flex items-center justify-between">
+          <div className="p-2 sm:p-2.5 border-t border-slate-800 text-[11px] text-slate-400 font-mono flex items-center justify-between shrink-0">
             <div className="flex items-center gap-1.5">
               <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span>Free to use any AI endpoint & model.</span>
+              <span className="hidden sm:inline">Free to use any AI endpoint & model.</span>
+              <span className="sm:hidden">Any AI endpoint & model.</span>
             </div>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="text-cyan-400 hover:underline cursor-pointer"
+              className="px-3.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
             >
               Done
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 };
