@@ -11,7 +11,10 @@ import { generateAuditPdf } from './utils/pdfGenerator';
 import { SAMPLE_SCAN_RESULT } from './utils/sampleScan';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { DeployModal } from './components/DeployModal';
-import type { ScanResult } from './types/scanner';
+import { MobileDownloadModal } from './components/MobileDownloadModal';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import type { ScanResult, AiProviderId, CustomAiConfig } from './types/scanner';
 import {
   ShieldAlert,
   FileDown,
@@ -28,6 +31,56 @@ function ScannerContent() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
+  const [selectedAiProvider, setSelectedAiProvider] = useState<AiProviderId>(() => {
+    try {
+      const saved = localStorage.getItem('webscanner_ai_provider');
+      return (saved as AiProviderId) || 'gemini';
+    } catch {
+      return 'gemini';
+    }
+  });
+  const [selectedAiModel, setSelectedAiModel] = useState<string>(() => {
+    try {
+      return localStorage.getItem('webscanner_ai_model') || 'gemini-3.8-flash';
+    } catch {
+      return 'gemini-3.8-flash';
+    }
+  });
+  const [customAiConfig, setCustomAiConfig] = useState<CustomAiConfig | undefined>(() => {
+    try {
+      const baseUrl = localStorage.getItem('webscanner_custom_base_url');
+      const model = localStorage.getItem('webscanner_custom_model');
+      const providerName = localStorage.getItem('webscanner_custom_provider_name');
+      const apiKey = localStorage.getItem('webscanner_custom_api_key');
+      if (baseUrl || model) {
+        return {
+          baseUrl: baseUrl || 'https://api.deepseek.com/v1',
+          model: model || 'deepseek-chat',
+          providerName: providerName || 'DeepSeek',
+          apiKey: apiKey || undefined,
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return undefined;
+  });
+
+  const handleSelectAiProvider = (provider: AiProviderId, model: string, config?: CustomAiConfig) => {
+    setSelectedAiProvider(provider);
+    setSelectedAiModel(model);
+    if (config) {
+      setCustomAiConfig(config);
+    }
+    try {
+      localStorage.setItem('webscanner_ai_provider', provider);
+      localStorage.setItem('webscanner_ai_model', model);
+    } catch {
+      // ignore
+    }
+  };
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -35,7 +88,13 @@ function ScannerContent() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleScan = async (targetUrl: string, deepAiScan: boolean) => {
+  const handleScan = async (
+    targetUrl: string,
+    deepAiScan: boolean,
+    provider = selectedAiProvider,
+    model = selectedAiModel,
+    config = customAiConfig
+  ) => {
     setIsScanning(true);
     setError(null);
     setScanStep(t.progressStep1);
@@ -56,7 +115,14 @@ function ScannerContent() {
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: targetUrl, deepAiScan, lang: language }),
+        body: JSON.stringify({
+          url: targetUrl,
+          deepAiScan,
+          lang: language,
+          aiProvider: provider,
+          aiModel: model,
+          customAiConfig: config,
+        }),
       });
 
       clearInterval(stepInterval);
@@ -123,12 +189,16 @@ function ScannerContent() {
         </div>
       )}
 
+      {/* PWA Mobile Install Banner */}
+      <PWAInstallBanner onOpenMobileModal={() => setIsMobileModalOpen(true)} />
+
       {/* Top Bar Header with Language Selector & Docker Deploy */}
       <Header
         currentScan={scanResult}
         onExportPdf={handleExportPdf}
         onNewScan={handleNewScan}
         onOpenDeploy={() => setIsDeployModalOpen(true)}
+        onOpenMobile={() => setIsMobileModalOpen(true)}
         isScanning={isScanning}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -140,10 +210,27 @@ function ScannerContent() {
         onClose={() => setIsDeployModalOpen(false)}
       />
 
+      {/* Mobile Download & PWA Install Modal */}
+      <MobileDownloadModal
+        isOpen={isMobileModalOpen}
+        onClose={() => setIsMobileModalOpen(false)}
+      />
+
+      {/* Offline Status Indicator */}
+      <OfflineIndicator />
+
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
         {/* URL Input Bar */}
-        <ScanInput onScan={handleScan} isScanning={isScanning} scanStep={scanStep} />
+        <ScanInput
+          onScan={handleScan}
+          isScanning={isScanning}
+          scanStep={scanStep}
+          selectedProvider={selectedAiProvider}
+          selectedModel={selectedAiModel}
+          customConfig={customAiConfig}
+          onSelectProvider={handleSelectAiProvider}
+        />
 
         {/* Error Notification */}
         {error && (

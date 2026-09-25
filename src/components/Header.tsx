@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container } from 'lucide-react';
+import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { SupportedLanguage } from '../i18n/translations';
 import type { ScanResult } from '../types/scanner';
@@ -9,6 +9,7 @@ interface HeaderProps {
   onExportPdf: () => void;
   onNewScan: () => void;
   onOpenDeploy: () => void;
+  onOpenMobile: () => void;
   isScanning: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -19,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   onExportPdf,
   onNewScan,
   onOpenDeploy,
+  onOpenMobile,
   isScanning,
   activeTab,
   setActiveTab,
@@ -142,6 +144,16 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {/* Mobile App Download Button */}
+          <button
+            onClick={onOpenMobile}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-cyan-300 bg-cyan-950/70 hover:bg-cyan-900/70 rounded-lg border border-cyan-800/70 hover:border-cyan-600 transition-colors cursor-pointer select-none"
+            title="Download Mobile App (Android / iOS / PWA)"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Mobile App</span>
+          </button>
 
           {/* Docker & GitHub Modal Trigger */}
           <button

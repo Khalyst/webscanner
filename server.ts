@@ -8,6 +8,7 @@ import https from 'https';
 import http from 'http';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { getAvailableAiProviders, synthesizeSecurityReport } from './server/aiRouter.ts';
 import type {
   ScanResult,
   SecurityFlaw,
@@ -19,6 +20,7 @@ import type {
   PortCheck,
   SensitiveEndpointCheck,
   AiAnalysis,
+  AiProviderId,
   SecurityGrade,
   Severity,
 } from './src/types/scanner.ts';
@@ -32,6 +34,11 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
+
+// Available AI Providers API
+app.get('/api/ai-providers', (_req: Request, res: Response) => {
+  res.json(getAvailableAiProviders());
+});
 
 // Initialize Google GenAI
 const ai = new GoogleGenAI({
@@ -182,7 +189,7 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
 // Main Scan API
 app.post('/api/scan', async (req: Request, res: Response) => {
   const startTime = Date.now();
-  let { url: inputUrl, deepAiScan = true, lang = 'en' } = req.body;
+  let { url: inputUrl, deepAiScan = true, lang = 'en', aiProvider, aiModel, customAiConfig } = req.body;
 
   if (!inputUrl || typeof inputUrl !== 'string') {
     res.status(400).json({ error: 'Valid URL is required' });
@@ -1226,140 +1233,24 @@ app.post('/api/scan', async (req: Request, res: Response) => {
 
     const passedChecksCount = headersAudit.filter((h) => h.status === 'PASS').length + (sslInfo?.valid ? 2 : 0) + (dnsRecords.spf?.valid ? 1 : 0) + (dnsRecords.dmarc?.valid ? 1 : 0);
 
-    // 10. AI Deep Security Analysis via Gemini 3.8 Flash
+    // 10. AI Deep Security Analysis (AI-Agnostic Engine)
     let aiAnalysis: AiAnalysis | undefined;
-
-    if (deepAiScan && process.env.GEMINI_API_KEY) {
-      try {
-        const langNames: Record<string, string> = {
-          en: 'English',
-          es: 'Spanish',
-          fr: 'French',
-          de: 'German',
-          ja: 'Japanese',
-          zh: 'Simplified Chinese',
-          pt: 'Portuguese',
-          ar: 'Arabic',
-        };
-        const targetLangName = langNames[lang] || 'English';
-
-        const prompt = `You are a Principal Cybersecurity Penetration Tester and Chief Information Security Officer (CISO).
-Analyze this automated vulnerability scan report for domain "${hostname}" (URL: ${finalUrl}).
-LANGUAGE REQUIREMENT: Write the entire analysis in ${targetLangName} language so that an international executive reading in ${targetLangName} can understand it immediately.
-
-Audit Summary:
-- Security Score: ${score}/100 (Grade: ${securityGrade})
-- Total Flaws Found: ${flaws.length} (Critical: ${flawsCount.critical}, High: ${flawsCount.high}, Medium: ${flawsCount.medium}, Low: ${flawsCount.low})
-- HTTPS Redirection: ${httpsRedirects ? 'Enforced' : 'Missing'}
-- SSL/TLS: ${sslInfo?.valid ? `Valid (${sslInfo.protocol}, ${sslInfo.daysRemaining} days left)` : 'Invalid/Missing'}
-- Detected Stack: ${techStack.map((t) => `${t.name} (${t.category})`).join(', ') || 'Standard Web Server'}
-- Top Flaws: ${flaws.slice(0, 8).map((f) => `[${f.severity}] ${f.title}`).join('; ')}
-
-Return a comprehensive JSON security executive analysis matching this exact structure (with all strings translated to ${targetLangName}):
-{
-  "executiveSummary": "Concise high-impact 2-3 sentence CISO summary of posture and risk profile.",
-  "attackSurfaceOverview": "2-3 sentences evaluating the exposed attack surface, header hardening, and cryptographic state.",
-  "topThreatVectors": [
-    "Vector 1 describing primary exploit pathway",
-    "Vector 2 describing data exposure or interception risk",
-    "Vector 3 describing phishing/spoofing exposure"
-  ],
-  "remediationRoadmap": [
-    {
-      "step": 1,
-      "action": "Immediate tactical remediation title",
-      "priority": "CRITICAL",
-      "estimatedEffort": "< 1 hour"
-    },
-    {
-      "step": 2,
-      "action": "Next high-priority hardening step",
-      "priority": "HIGH",
-      "estimatedEffort": "1-2 hours"
-    },
-    {
-      "step": 3,
-      "action": "Strategic hardening measure",
-      "priority": "MEDIUM",
-      "estimatedEffort": "Half day"
-    }
-  ],
-  "complianceNotes": {
-    "owaspTop10": "Assessment against OWASP Top 10 vulnerabilities detected",
-    "pciDss": "Readiness status regarding PCI-DSS Requirement 4 (cryptography) and 6 (secure systems)",
-    "iso27001": "ISO 27001 Annex A.8 technical security control alignment"
-  }
-}`;
-
-        const geminiRes = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
-
-        const text = geminiRes.text;
-        if (text) {
-          aiAnalysis = JSON.parse(text);
-        }
-      } catch (geminiErr) {
-        console.error('Gemini AI synthesis fallback:', geminiErr);
-      }
-    }
-
-    // Deterministic fallback if Gemini was unavailable or skipped
-    if (!aiAnalysis) {
-      aiAnalysis = {
-        executiveSummary: `The automated audit for ${hostname} yielded a security posture score of ${score}/100 (Grade ${securityGrade}). ${
-          flawsCount.critical > 0
-            ? 'Critical vulnerability vectors require immediate intervention before exploitation.'
-            : flawsCount.high > 0
-            ? 'Several high-severity configuration and header flaws increase the external attack surface.'
-            : 'The domain demonstrates good baseline hygiene with moderate hardening opportunities in security headers and email policies.'
-        }`,
-        attackSurfaceOverview: `The endpoint exhibits ${flaws.length} detected flaws across HTTP headers, transport layer encryption, and DNS email authentication. ${
-          httpsRedirects ? 'HTTPS is enforced across standard entrypoints.' : 'Plaintext HTTP traffic is unredirected, exposing sessions to MitM interception.'
-        }`,
-        topThreatVectors: [
-          flawsCount.critical > 0
-            ? 'Direct exploitation of critical service misconfigurations or exposed sensitive repository/env files.'
-            : 'Credential and token theft through Cross-Site Scripting (XSS) due to lack of Content-Security-Policy enforcement.',
-          'Man-in-the-Middle (MitM) session stripping on public networks from missing or weak HSTS directives.',
-          'Domain spoofing and spear-phishing campaigns leveraging unverified or permissive SPF/DMARC policies.',
-        ],
-        remediationRoadmap: [
-          {
-            step: 1,
-            action: 'Deploy Strict-Transport-Security (HSTS) with 1-year max-age and includeSubDomains.',
-            priority: 'HIGH',
-            estimatedEffort: '30 mins',
-          },
-          {
-            step: 2,
-            action: 'Implement Content-Security-Policy (CSP) with restrictive script-src and object-src directives.',
-            priority: 'HIGH',
-            estimatedEffort: '2-4 hours',
-          },
-          {
-            step: 3,
-            action: 'Enforce DMARC policy with quarantine or reject mode to prevent brand impersonation.',
-            priority: 'MEDIUM',
-            estimatedEffort: '1 hour',
-          },
-          {
-            step: 4,
-            action: 'Suppress web server and runtime version tokens (Server, X-Powered-By) to prevent automated fingerprinting.',
-            priority: 'LOW',
-            estimatedEffort: '15 mins',
-          },
-        ],
-        complianceNotes: {
-          owaspTop10: `Primary findings correspond to OWASP A05:2021 (Security Misconfiguration) and A02:2021 (Cryptographic Failures).`,
-          pciDss: `Requires mandatory TLS 1.2+ configuration, strict HSTS enablement, and removal of exposed administrative endpoints under Requirement 4 & 6.`,
-          iso27001: `Aligns with ISO/IEC 27001:2022 Control A.8.20 (Network Security) and A.8.26 (Application Security Requirements).`,
-        },
-      };
+    if (deepAiScan) {
+      aiAnalysis = await synthesizeSecurityReport({
+        provider: aiProvider,
+        model: aiModel,
+        lang,
+        hostname,
+        finalUrl,
+        score,
+        securityGrade,
+        flaws,
+        flawsCount,
+        techStack,
+        sslInfo: sslInfo || undefined,
+        httpsRedirects,
+        customConfig: customAiConfig,
+      });
     }
 
     const scanResult: ScanResult = {

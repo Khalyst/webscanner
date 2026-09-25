@@ -36,6 +36,7 @@ COPY --from=builder /app/dist ./dist
 
 # Copy backend server code and TypeScript interfaces
 COPY --from=builder /app/server.ts ./server.ts
+COPY --from=builder /app/server ./server
 COPY --from=builder /app/src/types ./src/types
 
 # Expose web server port

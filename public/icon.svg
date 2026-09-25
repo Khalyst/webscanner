@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="radarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="#1e293b" stroke-width="4"/>
+
+  <!-- Radar Grid Background -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#0e7490" stroke-width="2" stroke-dasharray="6,6" opacity="0.4"/>
+  <circle cx="256" cy="256" r="115" fill="none" stroke="#0e7490" stroke-width="2" stroke-dasharray="4,4" opacity="0.4"/>
+  <circle cx="256" cy="256" r="60" fill="none" stroke="#0e7490" stroke-width="1.5" opacity="0.3"/>
+  <line x1="256" y1="80" x2="256" y2="432" stroke="#0e7490" stroke-width="1.5" opacity="0.3"/>
+  <line x1="80" y1="256" x2="432" y2="256" stroke="#0e7490" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Shield Outline -->
+  <path d="M256 96 L376 150 V260 C376 342 324 402 256 426 C188 402 136 342 136 260 V150 Z" 
+        fill="#082f49" fill-opacity="0.7" stroke="url(#shieldGrad)" stroke-width="12" stroke-linejoin="round"/>
+
+  <!-- Inner Radar Glow & Target -->
+  <path d="M256 128 L350 170 V255 C350 320 308 370 256 392 C204 370 162 320 162 255 V170 Z" 
+        fill="url(#radarGrad)" stroke="#22d3ee" stroke-width="4" stroke-opacity="0.5"/>
+
+  <!-- Center Crosshairs / Core -->
+  <circle cx="256" cy="256" r="32" fill="#0284c7" fill-opacity="0.3" stroke="#38bdf8" stroke-width="4"/>
+  <circle cx="256" cy="256" r="14" fill="#38bdf8"/>
+  <circle cx="256" cy="256" r="4" fill="#ffffff"/>
+
+  <!-- Scan Sweep Wedge -->
+  <path d="M256 256 L335 180 A110 110 0 0 1 350 256 Z" fill="#22d3ee" fill-opacity="0.3"/>
+  <line x1="256" y1="256" x2="335" y2="180" stroke="#67e8f9" stroke-width="4"/>
+</svg>

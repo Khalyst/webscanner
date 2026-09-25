@@ -5,6 +5,7 @@ import {
   FileDown,
   Layers,
   Award,
+  Bot,
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { ScanResult } from '../../types/scanner';
@@ -53,10 +54,19 @@ export const AiExecutiveReport: React.FC<AiExecutiveReportProps> = ({ scan, onEx
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">
-                {t.cisoReportTitle}
-              </h3>
-              <p className="text-xs text-slate-400">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  {t.cisoReportTitle}
+                </h3>
+                {ai.providerName && (
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-slate-800 flex items-center gap-1">
+                    <Bot className="w-3 h-3 text-cyan-400" />
+                    <span>{ai.providerName}</span>
+                    {ai.modelUsed && <span className="text-slate-500">· {ai.modelUsed}</span>}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
                 {t.cisoReportDesc}
               </p>
             </div>

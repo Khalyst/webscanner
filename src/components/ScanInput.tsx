@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { Search, Globe, Sparkles, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { AiProviderSelector } from './AiProviderSelector';
+import type { AiProviderId, CustomAiConfig } from '../types/scanner';
 
 interface ScanInputProps {
-  onScan: (url: string, deepAiScan: boolean) => void;
+  onScan: (url: string, deepAiScan: boolean, provider: AiProviderId, model: string, customConfig?: CustomAiConfig) => void;
   isScanning: boolean;
   scanStep?: string;
+  selectedProvider: AiProviderId;
+  selectedModel: string;
+  customConfig?: CustomAiConfig;
+  onSelectProvider: (provider: AiProviderId, model: string, customConfig?: CustomAiConfig) => void;
 }
 
 const SAMPLE_TARGETS = [
@@ -15,7 +21,15 @@ const SAMPLE_TARGETS = [
   { label: 'wikipedia.org', url: 'https://wikipedia.org', tag: 'Knowledge Base' },
 ];
 
-export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isScanning, scanStep }) => {
+export const ScanInput: React.FC<ScanInputProps> = ({
+  onScan,
+  isScanning,
+  scanStep,
+  selectedProvider,
+  selectedModel,
+  customConfig,
+  onSelectProvider,
+}) => {
   const { t } = useLanguage();
   const [url, setUrl] = useState('');
   const [deepAiScan, setDeepAiScan] = useState(true);
@@ -23,12 +37,12 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isScanning, scanSt
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim() || isScanning) return;
-    onScan(url.trim(), deepAiScan);
+    onScan(url.trim(), deepAiScan, selectedProvider, selectedModel, customConfig);
   };
 
   const handleSelectSample = (sampleUrl: string) => {
     setUrl(sampleUrl);
-    onScan(sampleUrl, deepAiScan);
+    onScan(sampleUrl, deepAiScan, selectedProvider, selectedModel, customConfig);
   };
 
   return (
@@ -47,7 +61,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isScanning, scanSt
       </div>
 
       {/* Main Search Box */}
-      <form onSubmit={handleSubmit} className="relative">
+      <form onSubmit={handleSubmit} className="relative space-y-2">
         <div className="flex flex-col sm:flex-row items-stretch gap-2 bg-slate-900/90 p-2 rounded-xl border border-slate-800 shadow-xl focus-within:border-cyan-500/60 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all">
           <div className="flex items-center flex-1 px-3 py-2 text-slate-400">
             <Globe className="w-5 h-5 text-slate-500 mr-3 shrink-0" />
@@ -61,25 +75,11 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isScanning, scanSt
             />
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 px-2 sm:px-0">
-            <label className="flex items-center gap-2 text-xs text-slate-400 select-none cursor-pointer pr-2">
-              <input
-                type="checkbox"
-                checked={deepAiScan}
-                onChange={(e) => setDeepAiScan(e.target.checked)}
-                disabled={isScanning}
-                className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
-              />
-              <span className="flex items-center gap-1 font-medium">
-                <Sparkles className="w-3 h-3 text-cyan-400" />
-                {t.aiAnalysisLabel}
-              </span>
-            </label>
-
+          <div className="flex items-center justify-between sm:justify-end gap-2 px-2 sm:px-0 flex-wrap">
             <button
               type="submit"
               disabled={!url.trim() || isScanning}
-              className="px-5 py-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-semibold text-sm transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:cursor-not-allowed shadow-md"
+              className="px-5 py-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-semibold text-sm transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:cursor-not-allowed shadow-md w-full sm:w-auto"
             >
               {isScanning ? (
                 <>
@@ -94,6 +94,36 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isScanning, scanSt
               )}
             </button>
           </div>
+        </div>
+
+        {/* AI Engine & Deep Scan Controls Ribbon */}
+        <div className="flex items-center justify-between px-2 flex-wrap gap-2 text-xs">
+          <label className="flex items-center gap-2 text-slate-400 select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={deepAiScan}
+              onChange={(e) => setDeepAiScan(e.target.checked)}
+              disabled={isScanning}
+              className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+            />
+            <span className="flex items-center gap-1 font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{t.aiAnalysisLabel}</span>
+            </span>
+          </label>
+
+          {/* AI Provider Selector */}
+          {deepAiScan && (
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 text-[11px] font-mono hidden sm:inline">Engine:</span>
+              <AiProviderSelector
+                selectedProvider={selectedProvider}
+                selectedModel={selectedModel}
+                onSelect={onSelectProvider}
+                disabled={isScanning}
+              />
+            </div>
+          )}
         </div>
       </form>
 

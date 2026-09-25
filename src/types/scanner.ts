@@ -118,7 +118,29 @@ export interface SensitiveEndpointCheck {
   snippet?: string;
 }
 
+export type AiProviderId = 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'mistral' | 'offline' | 'custom';
+
+export interface CustomAiConfig {
+  providerName?: string;
+  model: string;
+  baseUrl: string;
+  apiKey?: string;
+}
+
+export interface AiProviderInfo {
+  id: AiProviderId;
+  name: string;
+  defaultModel: string;
+  availableModels: string[];
+  isConfigured: boolean;
+  isLocal: boolean;
+  description: string;
+}
+
 export interface AiAnalysis {
+  provider?: AiProviderId;
+  providerName?: string;
+  modelUsed?: string;
   executiveSummary: string;
   attackSurfaceOverview: string;
   topThreatVectors: string[];
