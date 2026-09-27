@@ -157,6 +157,30 @@ export interface AiAnalysis {
   };
 }
 
+export interface BulkQueueItem {
+  id: string;
+  url: string;
+  normalizedUrl: string;
+  status: 'pending' | 'scanning' | 'completed' | 'error';
+  progressStep?: string;
+  result?: ScanResult;
+  error?: string;
+  startedAt?: number;
+  completedAt?: number;
+}
+
+export interface BulkScanSummary {
+  total: number;
+  completed: number;
+  failed: number;
+  inProgress: number;
+  pending: number;
+  averageScore?: number;
+  criticalFlaws: number;
+  highFlaws: number;
+  totalFlaws: number;
+}
+
 export interface ScanResult {
   id: string;
   url: string;

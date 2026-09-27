@@ -75,6 +75,7 @@
 
 ## 🌟 Key Features
 
+- **Bulk URL Queue & Multi-Target Audits**: Queue dozens or hundreds of URLs via comma-separated list, line-by-line text, or file upload (`.txt`, `.csv`, `.json`). Features sequential rate-limiting protection, pause/resume controls, error retrying, average score computation, individual report drilldown, and batch export to both CSV and JSON formats.
 - **HTTP Security Headers Matrix**: Evaluates OWASP-recommended headers (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `COOP`, `COEP`, `CORP`) with PASS/WARN/FAIL status and server configuration snippets (`Nginx`, `Apache`, `Express`, `Cloudflare`).
 - **TLS / SSL Cryptographic Audit**: Live socket probing of SSL/TLS certificates, expiry days countdown, cipher strength, protocol version (`TLSv1.3`, `TLSv1.2`), and Subject Alternative Names (SANs).
 - **DNS & Email Anti-Spoofing Audit**: Complete resolution of A, AAAA, MX, TXT, NS, CNAME, and SOA records; automated analysis of SPF qualifiers (`-all`, `~all`, `+all`) and DMARC enforcement policies (`reject`, `quarantine`, `none`).

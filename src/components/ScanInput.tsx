@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Search, Globe, Sparkles, ArrowRight } from 'lucide-react';
+import { Search, Globe, Sparkles, ArrowRight, Layers } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { AiProviderSelector } from './AiProviderSelector';
 import type { AiProviderId, CustomAiConfig } from '../types/scanner';
 
 interface ScanInputProps {
   onScan: (url: string, deepAiScan: boolean, provider: AiProviderId, model: string, customConfig?: CustomAiConfig) => void;
+  onOpenBulkScan: () => void;
   isScanning: boolean;
   scanStep?: string;
   selectedProvider: AiProviderId;
@@ -23,6 +24,7 @@ const SAMPLE_TARGETS = [
 
 export const ScanInput: React.FC<ScanInputProps> = ({
   onScan,
+  onOpenBulkScan,
   isScanning,
   scanStep,
   selectedProvider,
@@ -76,6 +78,17 @@ export const ScanInput: React.FC<ScanInputProps> = ({
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-2 px-2 sm:px-0 flex-wrap">
+            <button
+              type="button"
+              onClick={onOpenBulkScan}
+              disabled={isScanning}
+              className="px-3.5 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 hover:border-cyan-500/40 text-xs sm:text-sm font-semibold font-mono transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto"
+              title="Audit multiple URLs from a list or file"
+            >
+              <Layers className="w-4 h-4 text-cyan-400" />
+              <span>Bulk Scan</span>
+            </button>
+
             <button
               type="submit"
               disabled={!url.trim() || isScanning}

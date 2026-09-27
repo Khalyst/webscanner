@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone } from 'lucide-react';
+import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone, Layers } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { SupportedLanguage } from '../i18n/translations';
 import type { ScanResult } from '../types/scanner';
@@ -10,6 +10,7 @@ interface HeaderProps {
   onNewScan: () => void;
   onOpenDeploy: () => void;
   onOpenMobile: () => void;
+  onOpenBulkScan: () => void;
   isScanning: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNewScan,
   onOpenDeploy,
   onOpenMobile,
+  onOpenBulkScan,
   isScanning,
   activeTab,
   setActiveTab,
@@ -144,6 +146,16 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {/* Bulk Audit Queue Trigger */}
+          <button
+            onClick={onOpenBulkScan}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-cyan-300 bg-cyan-950/70 hover:bg-cyan-900/80 rounded-lg border border-cyan-800/80 hover:border-cyan-600 transition-colors cursor-pointer select-none"
+            title="Bulk URL Security Auditing (Queue Multiple Targets / Upload File)"
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Bulk Scan</span>
+          </button>
 
           {/* Mobile App Download Button */}
           <button

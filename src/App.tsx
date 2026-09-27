@@ -12,6 +12,7 @@ import { SAMPLE_SCAN_RESULT } from './utils/sampleScan';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { DeployModal } from './components/DeployModal';
 import { MobileDownloadModal } from './components/MobileDownloadModal';
+import { BulkScannerModal } from './components/BulkScannerModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import type { ScanResult, AiProviderId, CustomAiConfig } from './types/scanner';
@@ -21,6 +22,7 @@ import {
   AlertCircle,
   Sparkles,
   ExternalLink,
+  Layers,
 } from 'lucide-react';
 
 function ScannerContent() {
@@ -32,6 +34,7 @@ function ScannerContent() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedAiProvider, setSelectedAiProvider] = useState<AiProviderId>(() => {
     try {
       const saved = localStorage.getItem('webscanner_ai_provider');
@@ -199,6 +202,7 @@ function ScannerContent() {
         onNewScan={handleNewScan}
         onOpenDeploy={() => setIsDeployModalOpen(true)}
         onOpenMobile={() => setIsMobileModalOpen(true)}
+        onOpenBulkScan={() => setIsBulkModalOpen(true)}
         isScanning={isScanning}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -216,6 +220,21 @@ function ScannerContent() {
         onClose={() => setIsMobileModalOpen(false)}
       />
 
+      {/* Bulk URL Scanning Queue Modal */}
+      <BulkScannerModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onViewDetailedResult={(result) => {
+          setScanResult(result);
+          setActiveTab('overview');
+          showToast(`${t.navOverview}: ${result.hostname}`, 'success');
+        }}
+        selectedAiProvider={selectedAiProvider}
+        selectedAiModel={selectedAiModel}
+        customAiConfig={customAiConfig}
+        onSelectAiProvider={handleSelectAiProvider}
+      />
+
       {/* Offline Status Indicator */}
       <OfflineIndicator />
 
@@ -224,6 +243,7 @@ function ScannerContent() {
         {/* URL Input Bar */}
         <ScanInput
           onScan={handleScan}
+          onOpenBulkScan={() => setIsBulkModalOpen(true)}
           isScanning={isScanning}
           scanStep={scanStep}
           selectedProvider={selectedAiProvider}
@@ -292,13 +312,23 @@ function ScannerContent() {
                 </p>
               </div>
 
-              <button
-                onClick={handleLoadSample}
-                className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-semibold font-mono transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-              >
-                <span>{t.viewSampleAudit}</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-center sm:justify-end">
+                <button
+                  onClick={() => setIsBulkModalOpen(true)}
+                  className="px-4 py-2.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/80 hover:border-cyan-600 text-xs font-semibold font-mono transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Bulk URL Scanner</span>
+                </button>
+
+                <button
+                  onClick={handleLoadSample}
+                  className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold font-mono transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <span>{t.viewSampleAudit}</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         )}
