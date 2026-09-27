@@ -24,7 +24,8 @@ cd webscanner
 
 # 2. (Optional) Set up environment variables
 cp .env.example .env
-# Edit .env and insert your GEMINI_API_KEY if desired
+# Default runs the 100% free Native Deterministic Engine (no API keys needed)
+# Optionally add your personal GEMINI_API_KEY, OPENAI_API_KEY, etc.
 
 # 3. Build and launch with Docker Compose
 docker compose up -d --build
@@ -39,7 +40,7 @@ cd webscanner
 # 2. Install dependencies
 npm install
 
-# 3. Start development server
+# 3. Start development server (defaults to 100% free rule engine)
 npm run dev
 
 # Or build and launch for production
@@ -58,7 +59,7 @@ npm start`;
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - GEMINI_API_KEY=\${GEMINI_API_KEY:-}`;
+      - DEFAULT_AI_PROVIDER=offline`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">

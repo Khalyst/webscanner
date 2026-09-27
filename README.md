@@ -108,12 +108,13 @@ Copy the example environment configuration:
 ```bash
 cp .env.example .env
 ```
-Edit `.env` to configure your preferred AI provider API key, or use the Native Offline Engine:
+Edit `.env` to configure optional AI provider API keys, or run the default Native Offline Engine (no keys needed):
 ```env
-# Optional: Gemini API Key for AI threat synthesis
-GEMINI_API_KEY="your_gemini_api_key_here"
+# Default: 100% free, private Native Deterministic Rule Engine
+DEFAULT_AI_PROVIDER="offline"
 
-# Optional: Other AI providers
+# Optional: User-provided API keys (BYOK) for cloud AI synthesis
+GEMINI_API_KEY=""
 OPENAI_API_KEY=""
 ANTHROPIC_API_KEY=""
 MISTRAL_API_KEY=""
@@ -158,12 +159,11 @@ If you prefer using standard `docker run`:
 # 1. Build the Docker image
 docker build -t webscanner:latest .
 
-# 2. Run the container
+# 2. Run the container (defaults to 100% free offline rule engine)
 docker run -d \
   --name webscanner \
   -p 3000:3000 \
-  -e GEMINI_API_KEY="your_gemini_api_key_here" \
-  -e DEFAULT_AI_PROVIDER="gemini" \
+  -e DEFAULT_AI_PROVIDER="offline" \
   --restart unless-stopped \
   webscanner:latest
 ```
@@ -236,13 +236,13 @@ WEBSCANNER is built from the ground up to be **AI-agnostic**. Users and security
 
 | Provider | Supported Models | Setup / Requirements | Privacy Level |
 |---|---|---|---|
+| **Native Deterministic Engine (Default)** | `Deterministic CISO Engine v1.0` | **Zero configuration required** (100% free built-in rule engine) | **100% Offline / Air-Gapped** |
 | **Custom / Any AI Provider** | **Any Model** (e.g. `deepseek-chat`, `llama-3.3-70b`, `qwen2.5-72b`, `sonar-pro`) | Type any name, model & OpenAI-compatible URL directly in rolling menu | User Choice (Cloud or Local) |
-| **Google Gemini** | `gemini-3.8-flash`, `gemini-3.1-pro-preview` | Set `GEMINI_API_KEY` | Cloud (Google Cloud) |
-| **OpenAI** | `gpt-4o`, `gpt-4o-mini`, `o3-mini` | Set `OPENAI_API_KEY` or enter in menu | Cloud (OpenAI) |
-| **Anthropic Claude** | `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022` | Set `ANTHROPIC_API_KEY` or enter in menu | Cloud (Anthropic) |
+| **Google Gemini (BYOK)** | `gemini-3.8-flash`, `gemini-3.1-pro-preview` | Bring Your Own Key: Enter personal key in browser menu | Cloud (User's Google Account) |
+| **OpenAI** | `gpt-4o`, `gpt-4o-mini`, `o3-mini` | Bring Your Own Key: Enter in menu or set `OPENAI_API_KEY` | Cloud (User's OpenAI Account) |
+| **Anthropic Claude** | `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022` | Bring Your Own Key: Enter in menu or set `ANTHROPIC_API_KEY` | Cloud (User's Anthropic Account) |
 | **Ollama (Self-Hosted)** | `llama3`, `mistral`, `deepseek-r1`, `qwen2.5` | Set `OLLAMA_BASE_URL` (default: `http://localhost:11434`) | **100% On-Premise / Private** |
-| **Mistral AI** | `mistral-large-latest`, `mistral-small-latest` | Set `MISTRAL_API_KEY` or enter in menu | Cloud (EU Sovereign) |
-| **Native Deterministic Engine** | `Deterministic CISO Engine v1.0` | **Zero configuration required** (built-in fallback) | **100% Offline / Air-Gapped** |
+| **Mistral AI** | `mistral-large-latest`, `mistral-small-latest` | Bring Your Own Key: Enter in menu or set `MISTRAL_API_KEY` | Cloud (EU Sovereign) |
 
 ### ✍️ Writing & Choosing Any AI in the Rolling Menu
 The rolling menu now features a **Search & Write** field and a **Custom AI Provider** configuration card:
@@ -462,18 +462,18 @@ GET /api/ai-providers
 |---|---|---|---|
 | `PORT` | Web Server | `3000` | Port for the full-stack Express server |
 | `NODE_ENV` | Runtime | `development` / `production` | Set to `production` in container environments |
-| `DEFAULT_AI_PROVIDER` | AI Engine | `gemini` | Default provider: `gemini`, `openai`, `anthropic`, `ollama`, `mistral`, or `offline` |
-| `GEMINI_API_KEY` | Google Gemini | `""` | Gemini API key for `gemini-3.8-flash` or `gemini-3.1-pro-preview` |
-| `OPENAI_API_KEY` | OpenAI | `""` | OpenAI API key for `gpt-4o`, `gpt-4o-mini`, etc. |
+| `DEFAULT_AI_PROVIDER` | AI Engine | `offline` | Default provider: `offline` (free rule engine), `gemini`, `openai`, `anthropic`, `ollama`, or `mistral` |
+| `GEMINI_API_KEY` | Google Gemini (Optional) | `""` | Optional personal Gemini API key (BYOK); scans default to free offline rule engine |
+| `OPENAI_API_KEY` | OpenAI (Optional) | `""` | Optional OpenAI API key for `gpt-4o`, `gpt-4o-mini`, etc. |
 | `OPENAI_MODEL` | OpenAI | `gpt-4o` | Default model identifier for OpenAI |
-| `ANTHROPIC_API_KEY` | Anthropic | `""` | Anthropic API key for `claude-3-5-sonnet-20241022` |
+| `ANTHROPIC_API_KEY` | Anthropic (Optional) | `""` | Optional Anthropic API key for `claude-3-5-sonnet-20241022` |
 | `ANTHROPIC_MODEL` | Anthropic | `claude-3-5-sonnet-20241022` | Default model identifier for Claude |
-| `MISTRAL_API_KEY` | Mistral AI | `""` | Mistral API key for `mistral-large-latest` |
+| `MISTRAL_API_KEY` | Mistral AI (Optional) | `""` | Optional Mistral API key for `mistral-large-latest` |
 | `MISTRAL_MODEL` | Mistral AI | `mistral-large-latest` | Default model identifier for Mistral |
 | `OLLAMA_BASE_URL` | Ollama (Local) | `http://localhost:11434` | Ollama service endpoint (or `http://host.docker.internal:11434` in Docker) |
 | `OLLAMA_MODEL` | Ollama (Local) | `llama3` | Default local model (e.g., `llama3`, `mistral`, `deepseek-r1`) |
 
-*Note: If no API keys are configured, WEBSCANNER will automatically operate in **Native Deterministic Mode** with 100% offline analysis.*
+*Note: Without any API keys configured, WEBSCANNER automatically runs in **Native Deterministic Mode** with 100% offline, free analysis.*
 
 ---
 
