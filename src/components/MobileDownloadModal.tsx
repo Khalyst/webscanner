@@ -30,9 +30,19 @@ export const MobileDownloadModal: React.FC<MobileDownloadModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  const currentUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}${window.location.pathname}`
-    : 'https://ais-dev-4pn2tbbbidgc5bf6d5untx-628190792224.us-east1.run.app/';
+  const getPublicShareUrl = () => {
+    if (typeof window === 'undefined') {
+      return 'https://ais-pre-4pn2tbbbidgc5bf6d5untx-628190792224.us-east1.run.app/';
+    }
+    // If running inside the internal AI Studio dev preview (ais-dev-...), convert to the public shareable URL (ais-pre-...)
+    const origin = window.location.origin;
+    if (origin.includes('ais-dev-')) {
+      return `${origin.replace('ais-dev-', 'ais-pre-')}${window.location.pathname}`;
+    }
+    return `${origin}${window.location.pathname}`;
+  };
+
+  const currentUrl = getPublicShareUrl();
 
   const handleInstallClick = async () => {
     const success = await install();
