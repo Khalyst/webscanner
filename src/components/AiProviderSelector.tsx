@@ -105,7 +105,16 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
     }
   });
 
+  const [geminiApiKey, setGeminiApiKey] = useState(() => {
+    try {
+      return localStorage.getItem('webscanner_gemini_api_key') || '';
+    } catch {
+      return '';
+    }
+  });
+
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [isEditingCustomModel, setIsEditingCustomModel] = useState(false);
   const [freeformModelInput, setFreeformModelInput] = useState('');
 
@@ -120,10 +129,15 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
       } else {
         localStorage.removeItem('webscanner_custom_api_key');
       }
+      if (geminiApiKey) {
+        localStorage.setItem('webscanner_gemini_api_key', geminiApiKey);
+      } else {
+        localStorage.removeItem('webscanner_gemini_api_key');
+      }
     } catch {
       // ignore
     }
-  }, [customName, customBaseUrl, customModelInput, customApiKey]);
+  }, [customName, customBaseUrl, customModelInput, customApiKey, geminiApiKey]);
 
   useEffect(() => {
     // Fetch available providers from server
@@ -137,13 +151,22 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
       .catch(() => {
         setProviders([
           {
+            id: 'offline',
+            name: 'Native Deterministic Rule Engine',
+            defaultModel: 'Deterministic CISO Engine v1.0',
+            availableModels: ['Deterministic CISO Engine v1.0'],
+            isConfigured: true,
+            isLocal: true,
+            description: 'Default: 100% free, private algorithmic CVSS scoring. Zero API keys, zero cloud credits used.',
+          },
+          {
             id: 'gemini',
-            name: 'Google Gemini',
+            name: 'Google Gemini (User API Key)',
             defaultModel: 'gemini-3.8-flash',
             availableModels: ['gemini-3.8-flash', 'gemini-3.1-pro-preview'],
-            isConfigured: true,
+            isConfigured: false,
             isLocal: false,
-            description: 'Flagship reasoning and threat modeling by Google DeepMind.',
+            description: 'Bring Your Own Key (BYOK). Enter your personal Gemini key; host account is never used.',
           },
           {
             id: 'custom',
@@ -156,7 +179,7 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
           },
           {
             id: 'openai',
-            name: 'OpenAI',
+            name: 'OpenAI (User API Key)',
             defaultModel: 'gpt-4o',
             availableModels: ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
             isConfigured: false,
@@ -165,7 +188,7 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
           },
           {
             id: 'anthropic',
-            name: 'Anthropic Claude',
+            name: 'Anthropic Claude (User API Key)',
             defaultModel: 'claude-3-5-sonnet-20241022',
             availableModels: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
             isConfigured: false,
@@ -183,21 +206,12 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
           },
           {
             id: 'mistral',
-            name: 'Mistral AI',
+            name: 'Mistral AI (User API Key)',
             defaultModel: 'mistral-large-latest',
             availableModels: ['mistral-large-latest', 'mistral-small-latest'],
             isConfigured: false,
             isLocal: false,
             description: 'High-performance European sovereign enterprise foundation models.',
-          },
-          {
-            id: 'offline',
-            name: 'Native Deterministic Rule Engine',
-            defaultModel: 'Deterministic CISO Engine v1.0',
-            availableModels: ['Deterministic CISO Engine v1.0'],
-            isConfigured: true,
-            isLocal: true,
-            description: 'Zero external dependencies; instant algorithmic CVSS vulnerability scoring.',
           },
         ]);
       });
@@ -279,17 +293,25 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
     handleApplyCustomProvider(preset.name, preset.baseUrl, preset.model, customApiKey);
   };
 
-  const handleSelectStandardProvider = (p: AiProviderInfo, model: string) => {
+  const handleSelectStandardProvider = (p: AiProviderInfo, model: string, keyOverride?: string) => {
     if (p.id === 'custom') {
       handleApplyCustomProvider();
     } else {
-      // If user has a custom API key stored for openai/anthropic/mistral, send it
-      const customConfig: CustomAiConfig | undefined = customApiKey
+      let activeKey: string | undefined = undefined;
+      if (p.id === 'gemini') {
+        activeKey = keyOverride !== undefined ? keyOverride : geminiApiKey;
+      } else if (p.id === 'offline') {
+        activeKey = undefined;
+      } else {
+        activeKey = keyOverride !== undefined ? keyOverride : customApiKey;
+      }
+
+      const customConfig: CustomAiConfig | undefined = activeKey
         ? {
             providerName: p.name,
             model,
             baseUrl: '',
-            apiKey: customApiKey,
+            apiKey: activeKey,
           }
         : undefined;
       onSelect(p.id, model, customConfig);
@@ -664,6 +686,47 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
                             </div>
                           )}
                         </div>
+
+                        {/* Gemini BYOK API Key Input */}
+                        {p.id === 'gemini' && (
+                          <div className="mt-2.5 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] text-cyan-300 font-mono uppercase tracking-wider flex items-center gap-1 font-semibold">
+                                <Key className="w-3 h-3 text-cyan-400" />
+                                Your Gemini API Key (BYOK):
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setShowGeminiKey(!showGeminiKey)}
+                                className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer flex items-center gap-1"
+                              >
+                                {showGeminiKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                <span>{showGeminiKey ? 'Hide' : 'Show'}</span>
+                              </button>
+                            </div>
+                            <input
+                              type={showGeminiKey ? 'text' : 'password'}
+                              value={geminiApiKey}
+                              onChange={(e) => {
+                                setGeminiApiKey(e.target.value);
+                                handleSelectStandardProvider(p, selectedModel, e.target.value);
+                              }}
+                              placeholder="AIzaSy... (Enter your free personal Gemini key)"
+                              className="w-full bg-slate-900 text-cyan-300 px-2.5 py-1.5 rounded border border-slate-700 focus:outline-none focus:border-cyan-400 text-xs font-mono"
+                            />
+                            <p className="text-[10px] text-slate-400 leading-relaxed">
+                              🔒 <strong>Host Account Shielded:</strong> Stored locally in your browser only. Your scans will never consume the developer's account or quota. If empty, the app runs the 100% free Native Deterministic Engine.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Offline Rule Engine Indicator */}
+                        {p.id === 'offline' && (
+                          <div className="mt-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-[11px] text-emerald-300 font-mono flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>100% Free & Private: Zero external cloud API calls, zero accounts or tokens required.</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -674,9 +737,9 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
           {/* Footer Note */}
           <div className="p-2 sm:p-2.5 border-t border-slate-800 text-[11px] text-slate-400 font-mono flex items-center justify-between shrink-0">
             <div className="flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span className="hidden sm:inline">Free to use any AI endpoint & model.</span>
-              <span className="sm:hidden">Any AI endpoint & model.</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="hidden sm:inline">Host Account Protected: Scans use offline rules or your own API keys.</span>
+              <span className="sm:hidden">Zero host account usage.</span>
             </div>
             <button
               type="button"

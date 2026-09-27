@@ -1,37 +1,37 @@
 import { GoogleGenAI } from '@google/genai';
 import type { AiAnalysis, AiProviderId, AiProviderInfo, SecurityFlaw, SecurityGrade, TechStackItem, SslInfo } from '../src/types/scanner';
 
-// Initialize Gemini
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || '',
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    },
-  },
-});
-
+// Provider Metadata
+// NOTE: Google Gemini, OpenAI, Claude, and Mistral are strictly BYOK (Bring Your Own Key).
+// The host's Google AI Studio account / server credentials are NEVER used for scans.
 export const PROVIDER_METADATA: Record<AiProviderId, { name: string; defaultModel: string; availableModels: string[]; isLocal: boolean; description: string }> = {
+  offline: {
+    name: 'Native Deterministic Rule Engine',
+    defaultModel: 'Deterministic CISO Engine v1.0',
+    availableModels: ['Deterministic CISO Engine v1.0'],
+    isLocal: true,
+    description: 'Default Engine: 100% free, private, local algorithmic CVSS scoring. Zero API keys, zero cloud credits used.',
+  },
   gemini: {
-    name: 'Google Gemini',
+    name: 'Google Gemini (User API Key)',
     defaultModel: 'gemini-3.8-flash',
     availableModels: ['gemini-3.8-flash', 'gemini-3.1-pro-preview'],
     isLocal: false,
-    description: 'Flagship reasoning and multimodal threat modeling by Google DeepMind.',
+    description: 'Bring Your Own Key (BYOK). Enter your own Gemini API key in the UI. Host account is never used.',
   },
   openai: {
-    name: 'OpenAI',
+    name: 'OpenAI (User API Key)',
     defaultModel: 'gpt-4o',
     availableModels: ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
     isLocal: false,
-    description: 'State-of-the-art vulnerability synthesis via OpenAI GPT-4o.',
+    description: 'State-of-the-art vulnerability synthesis via OpenAI GPT-4o with your own API key.',
   },
   anthropic: {
-    name: 'Anthropic Claude',
+    name: 'Anthropic Claude (User API Key)',
     defaultModel: 'claude-3-5-sonnet-20241022',
     availableModels: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
     isLocal: false,
-    description: 'Deep cybersecurity analysis and strategic remediation reasoning by Anthropic.',
+    description: 'Deep cybersecurity analysis and strategic remediation reasoning with your own Anthropic API key.',
   },
   ollama: {
     name: 'Ollama (Local / On-Premise)',
@@ -41,18 +41,11 @@ export const PROVIDER_METADATA: Record<AiProviderId, { name: string; defaultMode
     description: '100% private, on-premise local inference with zero telemetry or cloud API fees.',
   },
   mistral: {
-    name: 'Mistral AI',
+    name: 'Mistral AI (User API Key)',
     defaultModel: 'mistral-large-latest',
     availableModels: ['mistral-large-latest', 'mistral-small-latest', 'codestral-latest'],
     isLocal: false,
-    description: 'High-performance European sovereign enterprise foundation models.',
-  },
-  offline: {
-    name: 'Native Deterministic Rule Engine',
-    defaultModel: 'Deterministic CISO Engine v1.0',
-    availableModels: ['Deterministic CISO Engine v1.0'],
-    isLocal: true,
-    description: 'Zero external dependencies; instant algorithmic CVSS vulnerability scoring.',
+    description: 'High-performance European sovereign enterprise foundation models with your own API key.',
   },
   custom: {
     name: 'Custom / Any AI Provider',
@@ -64,19 +57,19 @@ export const PROVIDER_METADATA: Record<AiProviderId, { name: string; defaultMode
 };
 
 export function getAvailableAiProviders(): { activeProvider: AiProviderId; providers: AiProviderInfo[] } {
-  const activeProvider = (process.env.DEFAULT_AI_PROVIDER as AiProviderId) || 'gemini';
+  const activeProvider = (process.env.DEFAULT_AI_PROVIDER as AiProviderId) || 'offline';
 
   const providers: AiProviderInfo[] = Object.entries(PROVIDER_METADATA).map(([id, meta]) => {
     const pId = id as AiProviderId;
     let isConfigured = false;
 
-    if (pId === 'gemini') isConfigured = !!process.env.GEMINI_API_KEY;
-    else if (pId === 'openai') isConfigured = !!process.env.OPENAI_API_KEY;
-    else if (pId === 'anthropic') isConfigured = !!process.env.ANTHROPIC_API_KEY;
-    else if (pId === 'mistral') isConfigured = !!process.env.MISTRAL_API_KEY;
-    else if (pId === 'ollama') isConfigured = true; // Local server endpoint
-    else if (pId === 'offline') isConfigured = true; // Always available
-    else if (pId === 'custom') isConfigured = true; // User-provided config or endpoint
+    if (pId === 'offline') isConfigured = true;
+    else if (pId === 'ollama') isConfigured = true;
+    else if (pId === 'gemini') isConfigured = false; // BYOK: User enters own key in UI
+    else if (pId === 'openai') isConfigured = false;
+    else if (pId === 'anthropic') isConfigured = false;
+    else if (pId === 'mistral') isConfigured = false;
+    else if (pId === 'custom') isConfigured = true;
 
     return {
       id: pId,
@@ -116,9 +109,74 @@ export interface SynthesisParams {
   };
 }
 
+export function generateOfflineRuleBasedAnalysis(params: SynthesisParams): AiAnalysis {
+  const {
+    hostname,
+    score,
+    securityGrade,
+    flaws,
+    flawsCount,
+    httpsRedirects,
+  } = params;
+
+  return {
+    provider: 'offline',
+    providerName: PROVIDER_METADATA.offline.name,
+    modelUsed: PROVIDER_METADATA.offline.defaultModel,
+    executiveSummary: `The automated audit for ${hostname} yielded a security posture score of ${score}/100 (Grade ${securityGrade}). ${
+      flawsCount.critical > 0
+        ? 'Critical vulnerability vectors require immediate intervention before exploitation.'
+        : flawsCount.high > 0
+        ? 'Several high-severity configuration and header flaws increase the external attack surface.'
+        : 'The domain demonstrates good baseline hygiene with moderate hardening opportunities in security headers and email policies.'
+    }`,
+    attackSurfaceOverview: `The endpoint exhibits ${flaws.length} detected flaws across HTTP headers, transport layer encryption, and DNS email authentication. ${
+      httpsRedirects ? 'HTTPS is enforced across standard entrypoints.' : 'Plaintext HTTP traffic is unredirected, exposing sessions to MitM interception.'
+    }`,
+    topThreatVectors: [
+      flawsCount.critical > 0
+        ? 'Direct exploitation of critical service misconfigurations or exposed sensitive repository/env files.'
+        : 'Credential and token theft through Cross-Site Scripting (XSS) due to lack of Content-Security-Policy enforcement.',
+      'Man-in-the-Middle (MitM) session stripping on public networks from missing or weak HSTS directives.',
+      'Domain spoofing and spear-phishing campaigns leveraging unverified or permissive SPF/DMARC policies.',
+    ],
+    remediationRoadmap: [
+      {
+        step: 1,
+        action: 'Deploy Strict-Transport-Security (HSTS) with 1-year max-age and includeSubDomains.',
+        priority: 'HIGH',
+        estimatedEffort: '30 mins',
+      },
+      {
+        step: 2,
+        action: 'Implement Content-Security-Policy (CSP) with restrictive script-src and object-src directives.',
+        priority: 'HIGH',
+        estimatedEffort: '2-4 hours',
+      },
+      {
+        step: 3,
+        action: 'Enforce DMARC policy with quarantine or reject mode to prevent brand impersonation.',
+        priority: 'MEDIUM',
+        estimatedEffort: '1 hour',
+      },
+      {
+        step: 4,
+        action: 'Suppress web server and runtime version tokens (Server, X-Powered-By) to prevent automated fingerprinting.',
+        priority: 'LOW',
+        estimatedEffort: '15 mins',
+      },
+    ],
+    complianceNotes: {
+      owaspTop10: 'Primary findings correspond to OWASP A05:2021 (Security Misconfiguration) and A02:2021 (Cryptographic Failures).',
+      pciDss: 'Requires mandatory TLS 1.2+ configuration, strict HSTS enablement, and removal of exposed administrative endpoints under Requirement 4 & 6.',
+      iso27001: 'Aligns with ISO/IEC 27001:2022 Control A.8.20 (Network Security) and A.8.26 (Application Security Requirements).',
+    },
+  };
+}
+
 export async function synthesizeSecurityReport(params: SynthesisParams): Promise<AiAnalysis> {
   const {
-    provider = (process.env.DEFAULT_AI_PROVIDER as AiProviderId) || 'gemini',
+    provider = (process.env.DEFAULT_AI_PROVIDER as AiProviderId) || 'offline',
     model,
     lang = 'en',
     hostname,
@@ -193,11 +251,30 @@ Return a valid JSON object matching this exact structure (with all human-readabl
   }
 }`;
 
-  // 1. Google Gemini
-  if (provider === 'gemini' && process.env.GEMINI_API_KEY) {
+  // 1. Google Gemini (User-Provided Key Only - Host account is NEVER accessed)
+  if (provider === 'gemini') {
+    const userApiKey = customConfig?.apiKey;
+    if (!userApiKey) {
+      console.log('Gemini requested without user-provided API key. Running Native Deterministic Rule Engine to protect host account.');
+      const offlineResult = generateOfflineRuleBasedAnalysis(params);
+      return {
+        ...offlineResult,
+        executiveSummary: `[Notice: Bring-Your-Own-Key Mode Active] To prevent unauthorized usage of the host's Gemini account quota, please enter your own Gemini API key in the AI Provider menu to activate Gemini live synthesis. Scanning was completed instantly using the 100% free Native Deterministic Rule Engine.\n\n${offlineResult.executiveSummary}`,
+      };
+    }
+
     try {
+      const userAi = new GoogleGenAI({
+        apiKey: userApiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
+
       const activeModel = model || PROVIDER_METADATA.gemini.defaultModel;
-      const response = await ai.models.generateContent({
+      const response = await userAi.models.generateContent({
         model: activeModel,
         contents: prompt,
         config: {
@@ -216,7 +293,7 @@ Return a valid JSON object matching this exact structure (with all human-readabl
         };
       }
     } catch (err) {
-      console.warn('Gemini synthesis failed, attempting fallback:', err);
+      console.warn('User Gemini key synthesis failed, falling back to deterministic engine:', err);
     }
   }
 
@@ -447,58 +524,6 @@ Return a valid JSON object matching this exact structure (with all human-readabl
     }
   }
 
-  // 7. Native Deterministic Rule Engine (Offline Fallback)
-  return {
-    provider: 'offline',
-    providerName: PROVIDER_METADATA.offline.name,
-    modelUsed: PROVIDER_METADATA.offline.defaultModel,
-    executiveSummary: `The automated audit for ${hostname} yielded a security posture score of ${score}/100 (Grade ${securityGrade}). ${
-      flawsCount.critical > 0
-        ? 'Critical vulnerability vectors require immediate intervention before exploitation.'
-        : flawsCount.high > 0
-        ? 'Several high-severity configuration and header flaws increase the external attack surface.'
-        : 'The domain demonstrates good baseline hygiene with moderate hardening opportunities in security headers and email policies.'
-    }`,
-    attackSurfaceOverview: `The endpoint exhibits ${flaws.length} detected flaws across HTTP headers, transport layer encryption, and DNS email authentication. ${
-      httpsRedirects ? 'HTTPS is enforced across standard entrypoints.' : 'Plaintext HTTP traffic is unredirected, exposing sessions to MitM interception.'
-    }`,
-    topThreatVectors: [
-      flawsCount.critical > 0
-        ? 'Direct exploitation of critical service misconfigurations or exposed sensitive repository/env files.'
-        : 'Credential and token theft through Cross-Site Scripting (XSS) due to lack of Content-Security-Policy enforcement.',
-      'Man-in-the-Middle (MitM) session stripping on public networks from missing or weak HSTS directives.',
-      'Domain spoofing and spear-phishing campaigns leveraging unverified or permissive SPF/DMARC policies.',
-    ],
-    remediationRoadmap: [
-      {
-        step: 1,
-        action: 'Deploy Strict-Transport-Security (HSTS) with 1-year max-age and includeSubDomains.',
-        priority: 'HIGH',
-        estimatedEffort: '30 mins',
-      },
-      {
-        step: 2,
-        action: 'Implement Content-Security-Policy (CSP) with restrictive script-src and object-src directives.',
-        priority: 'HIGH',
-        estimatedEffort: '2-4 hours',
-      },
-      {
-        step: 3,
-        action: 'Enforce DMARC policy with quarantine or reject mode to prevent brand impersonation.',
-        priority: 'MEDIUM',
-        estimatedEffort: '1 hour',
-      },
-      {
-        step: 4,
-        action: 'Suppress web server and runtime version tokens (Server, X-Powered-By) to prevent automated fingerprinting.',
-        priority: 'LOW',
-        estimatedEffort: '15 mins',
-      },
-    ],
-    complianceNotes: {
-      owaspTop10: 'Primary findings correspond to OWASP A05:2021 (Security Misconfiguration) and A02:2021 (Cryptographic Failures).',
-      pciDss: 'Requires mandatory TLS 1.2+ configuration, strict HSTS enablement, and removal of exposed administrative endpoints under Requirement 4 & 6.',
-      iso27001: 'Aligns with ISO/IEC 27001:2022 Control A.8.20 (Network Security) and A.8.26 (Application Security Requirements).',
-    },
-  };
+  // 7. Native Deterministic Rule Engine (Offline Default / Fallback)
+  return generateOfflineRuleBasedAnalysis(params);
 }

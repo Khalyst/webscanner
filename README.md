@@ -84,7 +84,7 @@
 - **Algorithmic CVSS Scoring & Grade**: Computes an algorithmic 0–100 security posture score and assigns an actionable letter grade (`A+` to `F`).
 - **Multilingual Support (8 Languages)**: Fully localized interface in English, Spanish (Español), French (Français), German (Deutsch), Japanese (日本語), Simplified Chinese (简体中文), Portuguese (Português), and Arabic (العربية with native RTL bidirectional layout).
 - **Downloadable Mobile App (PWA & Offline)**: Install WEBSCANNER on your smartphone (Android & iPhone) with 1-click install, native app launcher icon, standalone full-screen window, and offline caching powered by Service Workers.
-- **AI-Agnostic Intelligence Engine**: Choose the AI of your choice on the fly! Seamlessly supports **Google Gemini**, **OpenAI (GPT-4o)**, **Anthropic Claude (Claude 3.5 Sonnet)**, **Ollama (Self-Hosted/Local)**, **Mistral AI**, or the **Native Deterministic Rule Engine** (100% offline, zero external dependencies).
+- **Default Deterministic Engine & BYOK AI (Zero Host Account Usage)**: Scans default to the 100% free, private **Native Deterministic Rule Engine** (zero API keys, zero cloud costs). Users and mobile app users bring their own API keys (BYOK) if they want to run Google Gemini, OpenAI, Anthropic Claude, or Mistral. The host's personal Gemini account is never used or charged.
 - **Exportable PDF Audit Reports**: Generates professional vector-crisp multi-page PDF audit reports with 1-click download.
 
 ---

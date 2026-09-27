@@ -35,16 +35,16 @@ function ScannerContent() {
   const [selectedAiProvider, setSelectedAiProvider] = useState<AiProviderId>(() => {
     try {
       const saved = localStorage.getItem('webscanner_ai_provider');
-      return (saved as AiProviderId) || 'gemini';
+      return (saved as AiProviderId) || 'offline';
     } catch {
-      return 'gemini';
+      return 'offline';
     }
   });
   const [selectedAiModel, setSelectedAiModel] = useState<string>(() => {
     try {
-      return localStorage.getItem('webscanner_ai_model') || 'gemini-3.8-flash';
+      return localStorage.getItem('webscanner_ai_model') || 'Deterministic CISO Engine v1.0';
     } catch {
-      return 'gemini-3.8-flash';
+      return 'Deterministic CISO Engine v1.0';
     }
   });
   const [customAiConfig, setCustomAiConfig] = useState<CustomAiConfig | undefined>(() => {
