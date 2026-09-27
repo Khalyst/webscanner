@@ -30,7 +30,18 @@ export const MobileDownloadModal: React.FC<MobileDownloadModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://webscanner.app';
+  const PUBLIC_APP_URL = 'https://ais-pre-4pn2tbbbidgc5bf6d5untx-628190792224.us-east1.run.app/';
+  const currentUrl = (() => {
+    if (typeof window !== 'undefined') {
+      const href = window.location.href;
+      // If currently running in development, always redirect users and QR scanners to the public production preview
+      if (href.includes('-dev-') || href.includes('localhost') || href.includes('127.0.0.1')) {
+        return PUBLIC_APP_URL;
+      }
+      return href;
+    }
+    return PUBLIC_APP_URL;
+  })();
 
   const handleInstallClick = async () => {
     const success = await install();
