@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone, Layers } from 'lucide-react';
+import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone, Layers, Network } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { SupportedLanguage } from '../i18n/translations';
 import type { ScanResult } from '../types/scanner';
@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenDeploy: () => void;
   onOpenMobile: () => void;
   onOpenBulkScan: () => void;
+  onOpenMcpHub: () => void;
   isScanning: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDeploy,
   onOpenMobile,
   onOpenBulkScan,
+  onOpenMcpHub,
   isScanning,
   activeTab,
   setActiveTab,
@@ -47,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'headers', label: t.navHeaders },
     { id: 'ssl_dns', label: t.navSslDns },
     { id: 'tech_ports', label: t.navTechPorts },
+    { id: 'subdomains', label: `${t.navSubdomains} (${currentScan?.subdomains?.totalFound ?? 0})` },
     { id: 'ai_report', label: t.navExecutive },
   ];
 
@@ -146,6 +149,16 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {/* MCP & OSINT Hub Trigger */}
+          <button
+            onClick={onOpenMcpHub}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-purple-300 bg-purple-950/70 hover:bg-purple-900/80 rounded-lg border border-purple-800/70 hover:border-purple-600 transition-colors cursor-pointer select-none"
+            title="Model Context Protocol (MCP) & OSINT Tool Hub"
+          >
+            <Network className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">MCP Hub</span>
+          </button>
 
           {/* Bulk Audit Queue Trigger */}
           <button

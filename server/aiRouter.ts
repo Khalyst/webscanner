@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { AiAnalysis, AiProviderId, AiProviderInfo, SecurityFlaw, SecurityGrade, TechStackItem, SslInfo } from '../src/types/scanner';
+import type { AiAnalysis, AiProviderId, AiProviderInfo, CustomAiConfig, SecurityFlaw, SecurityGrade, TechStackItem, SslInfo } from '../src/types/scanner';
 
 // Provider Metadata
 // NOTE: Google Gemini, OpenAI, Claude, and Mistral are strictly BYOK (Bring Your Own Key).
@@ -463,14 +463,28 @@ Return a valid JSON object matching this exact structure (with all human-readabl
     try {
       const customBaseUrl = (customConfig?.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
       const customModel = customConfig?.model || model || 'deepseek-chat';
-      const customApiKey = customConfig?.apiKey || process.env.CUSTOM_AI_API_KEY || '';
+      const customApiKey = (customConfig?.apiKey || process.env.CUSTOM_AI_API_KEY || '').trim();
       const customProviderName = customConfig?.providerName || 'Custom AI';
+
+      const isLocalEndpoint = /^(https?:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|.*\.local)(:\d+)?/i.test(customBaseUrl);
+
+      // If remote cloud endpoint has no API key provided, do NOT make an unauthorized request that will fail with 401
+      if (!isLocalEndpoint && !customApiKey) {
+        console.log(`[AI-Router] ${customProviderName} requires an API key for remote endpoint ${customBaseUrl}. Safely using Native Deterministic Rule Engine.`);
+        const fallback = generateOfflineRuleBasedAnalysis(params);
+        fallback.warning = `${customProviderName} requires an API key for remote cloud requests. Safely switched to Native Deterministic Rule Engine.`;
+        return fallback;
+      }
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       if (customApiKey) {
         headers['Authorization'] = `Bearer ${customApiKey}`;
+      }
+      if (customBaseUrl.includes('openrouter.ai')) {
+        headers['HTTP-Referer'] = 'https://webscanner.internal';
+        headers['X-Title'] = 'WEBSCANNER';
       }
 
       const controller = new AbortController();
@@ -517,13 +531,178 @@ Return a valid JSON object matching this exact structure (with all human-readabl
         }
       } else {
         const errText = await res.text().catch(() => '');
-        console.warn(`Custom AI provider endpoint returned error ${res.status}:`, errText);
+        let cleanErr = errText;
+        try {
+          const parsed = JSON.parse(errText);
+          cleanErr = parsed.error?.message || errText;
+        } catch {
+          // ignore
+        }
+
+        let friendlyWarning = '';
+        if (res.status === 401 || res.status === 403 || errText.includes('Authentication Fails') || errText.includes('governor')) {
+          friendlyWarning = `${customProviderName} authentication failed (${res.status}: Invalid or rejected API key). Safely switched to Native Deterministic Rule Engine.`;
+        } else if (res.status === 429) {
+          friendlyWarning = `${customProviderName} rate limit or credits exhausted (429). Safely switched to Native Deterministic Rule Engine.`;
+        } else {
+          friendlyWarning = `${customProviderName} returned HTTP ${res.status}: ${cleanErr || 'Request rejected'}. Safely switched to Native Deterministic Rule Engine.`;
+        }
+
+        console.log(`[AI-Router] ${friendlyWarning}`);
+        const fallback = generateOfflineRuleBasedAnalysis(params);
+        fallback.warning = friendlyWarning;
+        return fallback;
       }
-    } catch (err) {
-      console.warn('Custom AI provider execution failed:', err);
+    } catch (err: any) {
+      console.log(`[AI-Router] Custom AI provider execution failed: ${err?.message || err}. Safely falling back to deterministic engine.`);
+      const fallback = generateOfflineRuleBasedAnalysis(params);
+      fallback.warning = `Custom AI provider connection issue (${err?.message || 'Network failure'}). Safely switched to Native Deterministic Rule Engine.`;
+      return fallback;
     }
   }
 
   // 7. Native Deterministic Rule Engine (Offline Default / Fallback)
   return generateOfflineRuleBasedAnalysis(params);
+}
+
+export interface TestAiResult {
+  success: boolean;
+  message: string;
+  providerName?: string;
+  modelUsed?: string;
+}
+
+export async function testAiConnection(params: {
+  provider: AiProviderId;
+  model?: string;
+  customConfig?: CustomAiConfig;
+}): Promise<TestAiResult> {
+  const { provider, model, customConfig } = params;
+
+  if (provider === 'offline') {
+    return {
+      success: true,
+      message: 'Native Deterministic Rule Engine is operational (100% local algorithms, no API key needed).',
+      providerName: PROVIDER_METADATA.offline.name,
+      modelUsed: PROVIDER_METADATA.offline.defaultModel,
+    };
+  }
+
+  if (provider === 'gemini') {
+    const key = (customConfig?.apiKey || '').trim();
+    if (!key) {
+      return { success: false, message: 'Google Gemini requires an API key. Please enter your key.' };
+    }
+    try {
+      const userAi = new GoogleGenAI({
+        apiKey: key,
+        httpOptions: {
+          headers: { 'User-Agent': 'aistudio-build' },
+        },
+      });
+      const activeModel = model || PROVIDER_METADATA.gemini.defaultModel;
+      const res = await userAi.models.generateContent({
+        model: activeModel,
+        contents: 'Say OK',
+      });
+      if (res.text !== undefined) {
+        return {
+          success: true,
+          message: `Connected successfully to Google Gemini (${activeModel}).`,
+          providerName: 'Google Gemini',
+          modelUsed: activeModel,
+        };
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Gemini authentication error: ${err?.message || 'Invalid API key'}`,
+      };
+    }
+  }
+
+  if (provider === 'custom' || customConfig?.baseUrl) {
+    const customBaseUrl = (customConfig?.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    const customModel = customConfig?.model || model || 'deepseek-chat';
+    const customApiKey = (customConfig?.apiKey || '').trim();
+    const customProviderName = customConfig?.providerName || 'Custom AI';
+
+    const isLocalEndpoint = /^(https?:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|.*\.local)(:\d+)?/i.test(customBaseUrl);
+    if (!isLocalEndpoint && !customApiKey) {
+      return {
+        success: false,
+        message: `${customProviderName} (${customBaseUrl}) requires an API key for remote access.`,
+      };
+    }
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (customApiKey) {
+        headers['Authorization'] = `Bearer ${customApiKey}`;
+      }
+      if (customBaseUrl.includes('openrouter.ai')) {
+        headers['HTTP-Referer'] = 'https://webscanner.internal';
+        headers['X-Title'] = 'WEBSCANNER';
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const endpoint = customBaseUrl.endsWith('/chat/completions')
+        ? customBaseUrl
+        : `${customBaseUrl}/chat/completions`;
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: customModel,
+          messages: [{ role: 'user', content: 'Ping' }],
+          max_tokens: 5,
+        }),
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        return {
+          success: true,
+          message: `Connected successfully to ${customProviderName} (${customModel}).`,
+          providerName: customProviderName,
+          modelUsed: customModel,
+        };
+      } else {
+        const errText = await res.text().catch(() => '');
+        let cleanErr = errText;
+        try {
+          const parsed = JSON.parse(errText);
+          cleanErr = parsed.error?.message || errText;
+        } catch {
+          // ignore
+        }
+
+        if (res.status === 401 || cleanErr.includes('Authentication Fails') || cleanErr.includes('governor')) {
+          return {
+            success: false,
+            message: `Authentication Failed (401): Invalid API key or rejected by provider governor.`,
+          };
+        }
+
+        return {
+          success: false,
+          message: `Endpoint returned error HTTP ${res.status}: ${cleanErr || res.statusText}`,
+        };
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Connection failed: ${err?.message || 'Endpoint unreachable'}`,
+      };
+    }
+  }
+
+  return {
+    success: true,
+    message: `${provider} provider verified.`,
+  };
 }

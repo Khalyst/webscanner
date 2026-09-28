@@ -6,6 +6,7 @@ import {
   Layers,
   Award,
   Bot,
+  AlertTriangle,
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { ScanResult } from '../../types/scanner';
@@ -80,6 +81,16 @@ export const AiExecutiveReport: React.FC<AiExecutiveReportProps> = ({ scan, onEx
             <span>{t.exportPdf}</span>
           </button>
         </div>
+
+        {ai.warning && (
+          <div className="mt-4 p-3 rounded-lg bg-amber-950/40 border border-amber-800/60 flex items-start gap-2.5 text-xs font-mono text-amber-200">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-amber-300">AI Engine Fallback Notice: </span>
+              <span>{ai.warning}</span>
+            </div>
+          </div>
+        )}
 
         <div className="pt-4 space-y-3">
           <h4 className="text-xs font-mono font-semibold uppercase tracking-wider text-cyan-400">

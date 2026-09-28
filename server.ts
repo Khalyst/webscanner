@@ -8,7 +8,16 @@ import net from 'net';
 import https from 'https';
 import http from 'http';
 import dotenv from 'dotenv';
-import { getAvailableAiProviders, synthesizeSecurityReport } from './server/aiRouter.ts';
+import { getAvailableAiProviders, synthesizeSecurityReport, testAiConnection } from './server/aiRouter.ts';
+import { queryCrtShSubdomains } from './server/crtShService.ts';
+import {
+  getMcpServers,
+  addOrUpdateMcpServer,
+  deleteMcpServer,
+  getMcpTools,
+  executeMcpTool,
+  testMcpServer,
+} from './server/mcpService.ts';
 import type {
   ScanResult,
   SecurityFlaw,
@@ -38,6 +47,97 @@ app.use(express.json());
 // Available AI Providers API
 app.get('/api/ai-providers', (_req: Request, res: Response) => {
   res.json(getAvailableAiProviders());
+});
+
+// Test AI Provider Connection
+app.post('/api/ai-providers/test', async (req: Request, res: Response) => {
+  try {
+    const { provider, model, customConfig } = req.body;
+    const testResult = await testAiConnection({
+      provider,
+      model,
+      customConfig,
+    });
+    res.json(testResult);
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test AI provider: ' + (err?.message || 'Unknown error'),
+    });
+  }
+});
+
+// OSINT: Passive Certificate Transparency Subdomains (crt.sh)
+app.get('/api/osint/subdomains', async (req: Request, res: Response) => {
+  try {
+    const domain = String(req.query.domain || req.query.host || '').trim();
+    if (!domain) {
+      return res.status(400).json({ error: 'Query parameter "domain" is required.' });
+    }
+    const audit = await queryCrtShSubdomains(domain);
+    res.json(audit);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Subdomain enumeration failed: ' + (err?.message || 'Internal error') });
+  }
+});
+
+// MCP: List Registered Servers
+app.get('/api/mcp/servers', (_req: Request, res: Response) => {
+  res.json(getMcpServers());
+});
+
+// MCP: Register or Update Server
+app.post('/api/mcp/servers', (req: Request, res: Response) => {
+  try {
+    const server = addOrUpdateMcpServer(req.body);
+    res.json(server);
+  } catch (err: any) {
+    res.status(400).json({ error: 'Failed to save MCP server: ' + (err?.message || 'Invalid config') });
+  }
+});
+
+// MCP: Delete Custom Server
+app.delete('/api/mcp/servers/:id', (req: Request, res: Response) => {
+  const success = deleteMcpServer(req.params.id);
+  res.json({ success });
+});
+
+// MCP: List Available Tools Across All Connected Servers
+app.get('/api/mcp/tools', async (_req: Request, res: Response) => {
+  try {
+    const tools = await getMcpTools();
+    res.json(tools);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to retrieve MCP tools: ' + (err?.message || 'Internal error') });
+  }
+});
+
+// MCP: Execute Tool Call
+app.post('/api/mcp/call', async (req: Request, res: Response) => {
+  try {
+    const { serverId, toolName, arguments: toolArgs } = req.body;
+    if (!toolName) {
+      return res.status(400).json({ success: false, error: 'toolName is required' });
+    }
+    const result = await executeMcpTool({
+      serverId: serverId || 'crtsh-builtin',
+      toolName,
+      arguments: toolArgs || {},
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Tool execution failed' });
+  }
+});
+
+// MCP: Test Server Connection
+app.post('/api/mcp/test', async (req: Request, res: Response) => {
+  try {
+    const testResult = await testMcpServer(req.body);
+    res.json(testResult);
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: 'Server test failed: ' + (err?.message || 'Unknown error') });
+  }
 });
 
 // Helper to check for private/internal IPs to prevent SSRF
@@ -1182,6 +1282,29 @@ app.post('/api/scan', async (req: Request, res: Response) => {
       }
     }
 
+    // 8.5. Passive OSINT: Certificate Transparency & Subdomain Discovery (crt.sh)
+    let subdomainsData = undefined;
+    try {
+      subdomainsData = await queryCrtShSubdomains(hostname);
+      if (subdomainsData && subdomainsData.totalFound > 0) {
+        if (subdomainsData.categoriesCount.devStaging > 0) {
+          addFlaw({
+            title: `Exposed Development / Staging Subdomains (${subdomainsData.categoriesCount.devStaging} Discovered via CT Logs)`,
+            category: 'OSINT',
+            severity: 'LOW',
+            cvssScore: 3.5,
+            owaspCategory: 'A05:2021 Security Misconfiguration',
+            description: `Public Certificate Transparency logs revealed ${subdomainsData.categoriesCount.devStaging} non-production subdomains associated with ${hostname}.`,
+            impact: 'Development or staging environments often run unhardened code, debug configurations, or outdated libraries that increase attack surface.',
+            evidence: `Discovered subdomains: ${subdomainsData.subdomains.filter(s => s.category === 'DEV_STAGING').slice(0, 5).map(s => s.subdomain).join(', ')}`,
+            remediation: 'Place non-production environments behind corporate VPNs, private DNS zones, or Zero-Trust Access controls.',
+          });
+        }
+      }
+    } catch (err) {
+      console.log('[OSINT] Passive subdomain query skipped:', err);
+    }
+
     // 9. Compute Overall Security Score & Letter Grade
     let score = 100;
     const flawsCount = {
@@ -1269,6 +1392,7 @@ app.post('/api/scan', async (req: Request, res: Response) => {
       robotsTxt: robotsTxtData,
       securityTxt: securityTxtData,
       aiAnalysis,
+      subdomains: subdomainsData,
     };
 
     res.json(scanResult);

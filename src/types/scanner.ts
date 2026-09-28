@@ -5,7 +5,7 @@ export type SecurityGrade = 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
 export interface SecurityFlaw {
   id: string;
   title: string;
-  category: 'HEADERS' | 'SSL_TLS' | 'DNS_EMAIL' | 'INFO_DISCLOSURE' | 'PORTS' | 'COOKIES' | 'RECON';
+  category: 'HEADERS' | 'SSL_TLS' | 'DNS_EMAIL' | 'INFO_DISCLOSURE' | 'PORTS' | 'COOKIES' | 'RECON' | 'OSINT';
   severity: Severity;
   cvssScore: number;
   owaspCategory?: string;
@@ -141,6 +141,8 @@ export interface AiAnalysis {
   provider?: AiProviderId;
   providerName?: string;
   modelUsed?: string;
+  warning?: string;
+  fallbackReason?: string;
   executiveSummary: string;
   attackSurfaceOverview: string;
   topThreatVectors: string[];
@@ -228,4 +230,83 @@ export interface ScanResult {
     raw?: string;
   };
   aiAnalysis?: AiAnalysis;
+  subdomains?: SubdomainAudit;
+}
+
+export type SubdomainCategory = 'DEV_STAGING' | 'ADMIN_PORTAL' | 'API_SERVICE' | 'INFRASTRUCTURE' | 'STORAGE' | 'GENERAL';
+
+export interface SubdomainEntry {
+  subdomain: string;
+  loggedAt?: string;
+  issuerName?: string;
+  isWildcard: boolean;
+  category: SubdomainCategory;
+  resolvedIp?: string;
+  isResolving?: boolean;
+}
+
+export interface SubdomainAudit {
+  domain: string;
+  queriedAt: string;
+  totalFound: number;
+  uniqueSubdomains: string[];
+  subdomains: SubdomainEntry[];
+  categoriesCount: {
+    devStaging: number;
+    adminPortal: number;
+    apiService: number;
+    infrastructure: number;
+    storage: number;
+    general: number;
+  };
+  hasWildcardCerts: boolean;
+  source: string;
+}
+
+export type McpServerType = 'builtin' | 'sse' | 'http';
+
+export interface McpToolParameter {
+  name: string;
+  type: string;
+  description: string;
+  required?: boolean;
+  default?: any;
+}
+
+export interface McpToolDefinition {
+  name: string;
+  description: string;
+  serverName: string;
+  serverId: string;
+  category: 'OSINT' | 'RECON' | 'NETWORK' | 'INTELLIGENCE' | 'CUSTOM';
+  parameters: McpToolParameter[];
+}
+
+export interface McpServerConfig {
+  id: string;
+  name: string;
+  type: McpServerType;
+  endpoint: string;
+  status: 'connected' | 'disconnected' | 'error';
+  latencyMs?: number;
+  description: string;
+  toolsCount: number;
+  isBuiltin: boolean;
+  apiKey?: string;
+  lastConnected?: string;
+}
+
+export interface McpToolCallRequest {
+  serverId: string;
+  toolName: string;
+  arguments: Record<string, any>;
+}
+
+export interface McpToolCallResponse {
+  success: boolean;
+  result?: any;
+  error?: string;
+  executionTimeMs: number;
+  toolName: string;
+  serverId: string;
 }

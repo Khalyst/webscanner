@@ -6,6 +6,7 @@ import { FlawsList } from './components/FlawsList';
 import { HeadersAudit } from './components/tabs/HeadersAudit';
 import { SslDnsAudit } from './components/tabs/SslDnsAudit';
 import { TechPortsAudit } from './components/tabs/TechPortsAudit';
+import { SubdomainsAudit } from './components/tabs/SubdomainsAudit';
 import { AiExecutiveReport } from './components/tabs/AiExecutiveReport';
 import { generateAuditPdf } from './utils/pdfGenerator';
 import { SAMPLE_SCAN_RESULT } from './utils/sampleScan';
@@ -13,6 +14,7 @@ import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { DeployModal } from './components/DeployModal';
 import { MobileDownloadModal } from './components/MobileDownloadModal';
 import { BulkScannerModal } from './components/BulkScannerModal';
+import { McpHubModal } from './components/McpHubModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import type { ScanResult, AiProviderId, CustomAiConfig } from './types/scanner';
@@ -35,6 +37,7 @@ function ScannerContent() {
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
   const [selectedAiProvider, setSelectedAiProvider] = useState<AiProviderId>(() => {
     try {
       const saved = localStorage.getItem('webscanner_ai_provider');
@@ -89,6 +92,11 @@ function ScannerContent() {
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleQuickScan = (targetUrl: string) => {
+    handleScan(targetUrl, true, selectedAiProvider, selectedAiModel, customAiConfig);
+    setActiveTab('overview');
   };
 
   const handleScan = async (
@@ -203,6 +211,7 @@ function ScannerContent() {
         onOpenDeploy={() => setIsDeployModalOpen(true)}
         onOpenMobile={() => setIsMobileModalOpen(true)}
         onOpenBulkScan={() => setIsBulkModalOpen(true)}
+        onOpenMcpHub={() => setIsMcpModalOpen(true)}
         isScanning={isScanning}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -233,6 +242,14 @@ function ScannerContent() {
         selectedAiModel={selectedAiModel}
         customAiConfig={customAiConfig}
         onSelectAiProvider={handleSelectAiProvider}
+      />
+
+      {/* Model Context Protocol (MCP) & OSINT Tool Hub */}
+      <McpHubModal
+        isOpen={isMcpModalOpen}
+        onClose={() => setIsMcpModalOpen(false)}
+        defaultDomain={scanResult?.hostname || 'example.com'}
+        onScanTarget={handleQuickScan}
       />
 
       {/* Offline Status Indicator */}
@@ -351,6 +368,7 @@ function ScannerContent() {
                 { id: 'headers', label: t.navHeaders },
                 { id: 'ssl_dns', label: t.navSslDns },
                 { id: 'tech_ports', label: t.navTechPorts },
+                { id: 'subdomains', label: `${t.navSubdomains} (${scanResult.subdomains?.totalFound || 0})` },
                 { id: 'ai_report', label: t.navExecutive },
               ].map((tab) => (
                 <button
@@ -447,6 +465,14 @@ function ScannerContent() {
                 sensitiveEndpoints={scanResult.sensitiveEndpoints}
                 robotsTxt={scanResult.robotsTxt}
                 securityTxt={scanResult.securityTxt}
+              />
+            )}
+
+            {activeTab === 'subdomains' && (
+              <SubdomainsAudit
+                subdomains={scanResult.subdomains}
+                targetDomain={scanResult.hostname}
+                onScanSubdomain={handleQuickScan}
               />
             )}
 

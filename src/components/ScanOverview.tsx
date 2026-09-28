@@ -9,6 +9,7 @@ import {
   Unlock,
   FileDown,
   ExternalLink,
+  Layers,
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { ScanResult } from '../types/scanner';
@@ -128,7 +129,7 @@ export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, o
       </div>
 
       {/* Second row: Findings counts & Action buttons */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 pt-5">
         <button
           onClick={() => onSelectTab('flaws')}
           className="text-left p-3 rounded-lg bg-slate-950/40 border border-slate-800/80 hover:border-rose-500/40 transition-colors cursor-pointer group"
@@ -191,6 +192,20 @@ export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, o
           </div>
           <div className="text-xl font-bold font-mono text-emerald-400 mt-1 tabular-nums group-hover:scale-105 transition-transform origin-left">
             {scan.passedChecksCount}
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('subdomains')}
+          className="text-left p-3 rounded-lg bg-slate-950/40 border border-slate-800/80 hover:border-purple-500/40 transition-colors cursor-pointer group"
+          title="Discovered Subdomains via Certificate Transparency OSINT"
+        >
+          <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
+            <span>Subdomains</span>
+            <Layers className="w-3.5 h-3.5 text-purple-400" />
+          </div>
+          <div className="text-xl font-bold font-mono text-purple-400 mt-1 tabular-nums group-hover:scale-105 transition-transform origin-left">
+            {scan.subdomains?.totalFound ?? 0}
           </div>
         </button>
 

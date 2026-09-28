@@ -43,6 +43,7 @@ export interface TranslationDictionary {
   navHeaders: string;
   navSslDns: string;
   navTechPorts: string;
+  navSubdomains: string;
   navExecutive: string;
 
   // Actions
@@ -160,6 +161,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'HTTP Headers',
     navSslDns: 'SSL & DNS',
     navTechPorts: 'Tech & Ports',
+    navSubdomains: 'Subdomains & CT',
     navExecutive: 'Executive Report',
 
     exportPdf: 'Export PDF',
@@ -267,6 +269,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'Encabezados HTTP',
     navSslDns: 'SSL y DNS',
     navTechPorts: 'Tecnología y Puertos',
+    navSubdomains: 'Subdominios y CT',
     navExecutive: 'Informe Ejecutivo',
 
     exportPdf: 'Exportar PDF',
@@ -374,6 +377,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'En-têtes HTTP',
     navSslDns: 'SSL & DNS',
     navTechPorts: 'Tech & Ports',
+    navSubdomains: 'Sous-domaines & CT',
     navExecutive: 'Rapport Exécutif',
 
     exportPdf: 'Exporter en PDF',
@@ -481,6 +485,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'HTTP-Header',
     navSslDns: 'SSL & DNS',
     navTechPorts: 'Technologie & Ports',
+    navSubdomains: 'Subdomains & CT',
     navExecutive: 'Management-Bericht',
 
     exportPdf: 'PDF Exportieren',
@@ -588,6 +593,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'HTTPヘッダー',
     navSslDns: 'SSL & DNS',
     navTechPorts: '技術 & ポート',
+    navSubdomains: 'サブドメイン & CT',
     navExecutive: '診断レポート',
 
     exportPdf: 'PDF出力',
@@ -695,6 +701,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'HTTP 标头',
     navSslDns: 'SSL 与 DNS',
     navTechPorts: '技术与端口',
+    navSubdomains: '子域名与CT日志',
     navExecutive: '高管报告',
 
     exportPdf: '导出 PDF',
@@ -802,6 +809,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'Cabeçalhos HTTP',
     navSslDns: 'SSL e DNS',
     navTechPorts: 'Tecnologia e Portas',
+    navSubdomains: 'Subdomínios e CT',
     navExecutive: 'Relatório Executivo',
 
     exportPdf: 'Exportar PDF',
@@ -909,6 +917,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     navHeaders: 'ترويسات HTTP',
     navSslDns: 'SSL و DNS',
     navTechPorts: 'التقنيات والمنافذ',
+    navSubdomains: 'النطاقات الفرعية وسجلات CT',
     navExecutive: 'التقرير التنفيذي',
 
     exportPdf: 'تصدير PDF',

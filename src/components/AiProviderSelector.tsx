@@ -17,6 +17,8 @@ import {
   EyeOff,
   Zap,
   X,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 import type { AiProviderId, AiProviderInfo, CustomAiConfig } from '../types/scanner';
 
@@ -117,6 +119,42 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [isEditingCustomModel, setIsEditingCustomModel] = useState(false);
   const [freeformModelInput, setFreeformModelInput] = useState('');
+  const [testingStatus, setTestingStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testMessage, setTestMessage] = useState<string>('');
+
+  const handleTestConnection = async (targetProvider: AiProviderId = selectedProvider) => {
+    setTestingStatus('testing');
+    setTestMessage('');
+    try {
+      const payload = {
+        provider: targetProvider,
+        model: targetProvider === 'custom' ? customModelInput : selectedModel,
+        customConfig: {
+          providerName: customName,
+          baseUrl: customBaseUrl,
+          model: customModelInput,
+          apiKey: targetProvider === 'gemini' ? geminiApiKey : customApiKey,
+        },
+      };
+
+      const res = await fetch('/api/ai-providers/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestingStatus('success');
+        setTestMessage(data.message || 'Connected successfully!');
+      } else {
+        setTestingStatus('error');
+        setTestMessage(data.message || 'Connection failed.');
+      }
+    } catch (err: any) {
+      setTestingStatus('error');
+      setTestMessage(err?.message || 'Network error while testing connection.');
+    }
+  };
 
   // Save custom state to localStorage
   useEffect(() => {
@@ -556,6 +594,57 @@ export const AiProviderSelector: React.FC<AiProviderSelectorProps> = ({
                       placeholder="sk-..."
                       className="w-full bg-slate-950 text-slate-200 px-2 py-1 rounded border border-slate-700 focus:outline-none focus:border-amber-400 text-xs font-mono"
                     />
+                  </div>
+
+                  {/* Cloud API Key Notice */}
+                  {!/^(https?:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|.*\.local)(:\d+)?/i.test(customBaseUrl) && !customApiKey.trim() && (
+                    <div className="p-2 rounded-lg bg-amber-950/40 border border-amber-800/60 text-amber-300 text-[11px] font-mono flex items-start gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div>
+                          <strong>API Key Needed:</strong> {customName || 'This provider'} requires an API key for cloud requests.
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          (If left empty, scans will automatically use the free <strong>Native Deterministic Rule Engine</strong> to prevent errors.)
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Test Connection Button & Status */}
+                  <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      disabled={testingStatus === 'testing'}
+                      onClick={() => handleTestConnection('custom')}
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-mono flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 self-start"
+                    >
+                      {testingStatus === 'testing' ? (
+                        <>
+                          <div className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                          <span>Testing Endpoint...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3 h-3 text-amber-400" />
+                          <span>Test Endpoint Connection</span>
+                        </>
+                      )}
+                    </button>
+
+                    {testingStatus === 'success' && (
+                      <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1 truncate">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{testMessage}</span>
+                      </span>
+                    )}
+
+                    {testingStatus === 'error' && (
+                      <span className="text-[11px] font-mono text-rose-400 flex items-center gap-1 truncate" title={testMessage}>
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate max-w-[260px]">{testMessage}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
