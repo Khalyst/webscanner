@@ -1,5 +1,5 @@
 import dns from 'dns';
-import type { SubdomainAudit, SubdomainCategory, SubdomainEntry } from '../src/types/scanner';
+import type { SubdomainAudit, SubdomainCategory, SubdomainEntry } from '../src/types/scanner.ts';
 
 interface CrtShRecord {
   issuer_ca_id: number;

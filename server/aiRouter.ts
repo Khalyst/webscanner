@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { AiAnalysis, AiProviderId, AiProviderInfo, CustomAiConfig, SecurityFlaw, SecurityGrade, TechStackItem, SslInfo } from '../src/types/scanner';
+import type { AiAnalysis, AiProviderId, AiProviderInfo, CustomAiConfig, SecurityFlaw, SecurityGrade, TechStackItem, SslInfo } from '../src/types/scanner.ts';
 
 // Provider Metadata
 // NOTE: Google Gemini, OpenAI, Claude, and Mistral are strictly BYOK (Bring Your Own Key).

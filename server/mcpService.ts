@@ -1,11 +1,11 @@
 import dns from 'dns';
-import { queryCrtShSubdomains, extractRootDomain } from './crtShService';
+import { queryCrtShSubdomains, extractRootDomain } from './crtShService.ts';
 import type {
   McpServerConfig,
   McpToolCallRequest,
   McpToolCallResponse,
   McpToolDefinition,
-} from '../src/types/scanner';
+} from '../src/types/scanner.ts';
 
 // In-memory registry of MCP servers
 const INITIAL_MCP_SERVERS: McpServerConfig[] = [
