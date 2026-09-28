@@ -16,6 +16,8 @@
 
 - [Overview & Architecture](#-overview--architecture)
 - [Key Features](#-key-features)
+- [Passive Subdomain & Certificate Transparency OSINT (crt.sh)](#-passive-subdomain--certificate-transparency-osint-crtsh)
+- [Model Context Protocol (MCP) Hub & Interactive Tool Runner](#-model-context-protocol-mcp-hub--interactive-tool-runner)
 - [Quick Start with Docker & Docker Compose](#-quick-start-with-docker--docker-compose-recommended)
 - [Download & Clone from GitHub](#-download--clone-from-github)
 - [Manual Local Setup (Node.js)](#-manual-local-setup-nodejs)
@@ -75,6 +77,8 @@
 
 ## 🌟 Key Features
 
+- **Passive Subdomain & Certificate Transparency OSINT (`crt.sh`)**: Queries global SSL/TLS Certificate Transparency logs to discover unlisted subdomains, hidden APIs, and staging portals without sending direct packets to the target. Features automatic classification into Dev/Staging, Admin/Portal, API/Gateway, Infrastructure, and Storage buckets, live DNS resolving verification, and 1-click pivot scanning.
+- **Model Context Protocol (MCP) Hub & Tool Runner**: Full implementation of the MCP v1.0 standard with a built-in server registry and live JSON-RPC execution engine. Comes pre-integrated with 4 built-in OSINT tool servers (`crt.sh`, `Wayback Machine CDX Archive Crawler`, `DNS Intelligence`, and `IP/ASN Threat Intelligence`) plus support for connecting custom local/remote MCP servers (HTTP/SSE) with interactive schema parameter inputs and latency tracking.
 - **Bulk URL Queue & Multi-Target Audits**: Queue dozens or hundreds of URLs via comma-separated list, line-by-line text, or file upload (`.txt`, `.csv`, `.json`). Features sequential rate-limiting protection, pause/resume controls, error retrying, average score computation, individual report drilldown, and batch export to both CSV and JSON formats.
 - **HTTP Security Headers Matrix**: Evaluates OWASP-recommended headers (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `COOP`, `COEP`, `CORP`) with PASS/WARN/FAIL status and server configuration snippets (`Nginx`, `Apache`, `Express`, `Cloudflare`).
 - **TLS / SSL Cryptographic Audit**: Live socket probing of SSL/TLS certificates, expiry days countdown, cipher strength, protocol version (`TLSv1.3`, `TLSv1.2`), and Subject Alternative Names (SANs).
@@ -87,6 +91,61 @@
 - **Downloadable Mobile App (PWA & Offline)**: Install WEBSCANNER on your smartphone (Android & iPhone) with 1-click install, native app launcher icon, standalone full-screen window, and offline caching powered by Service Workers.
 - **Default Deterministic Engine & BYOK AI (Zero Host Account Usage)**: Scans default to the 100% free, private **Native Deterministic Rule Engine** (zero API keys, zero cloud costs). Users and mobile app users bring their own API keys (BYOK) if they want to run Google Gemini, OpenAI, Anthropic Claude, or Mistral. The host's personal Gemini account is never used or charged.
 - **Exportable PDF Audit Reports**: Generates professional vector-crisp multi-page PDF audit reports with 1-click download.
+
+---
+
+## 🌐 Passive Subdomain & Certificate Transparency OSINT (crt.sh)
+
+WEBSCANNER integrates automated **Certificate Transparency (CT) log aggregation** via `crt.sh`. Every SSL/TLS certificate issued by public Certificate Authorities (Let's Encrypt, DigiCert, Cloudflare, Sectigo) is logged to append-only, cryptographic public CT logs.
+
+### Why Passive CT Reconnaissance Matters
+Unlike traditional brute-force DNS enumeration (which floods nameservers with thousands of DNS requests and can be detected or rate-limited), **passive Certificate Transparency querying sends zero packets to the target network**.
+
+```
+[ Target Domain Input ] ────────► [ crt.sh Global CT Logs ]
+                                           │
+       ┌───────────────────────────────────┴───────────────────────────────────┐
+       ▼                                   ▼                                   ▼
+[ Dev / Staging Portals ]          [ Admin / Auth Gateways ]           [ APIs & Microservices ]
+  dev.target.com                     admin.target.com                    api.target.com
+  staging.target.com                 vpn.target.com                      graphql.target.com
+  uat.target.com                     sso.target.com                      backend.target.com
+```
+
+### Features & Capabilities
+- **Automated Risk Categorization**:
+  - **Dev & Staging (Shadow IT)**: Detects forgotten staging instances, beta builds, and QA servers (`dev.*`, `staging.*`, `test.*`, `sandbox.*`). Raises automated CVSS security warnings if active non-production environments are publicly exposed.
+  - **Admin & Portals**: Identifies administrative gateways (`admin.*`, `vpn.*`, `portal.*`, `corp.*`, `bastion.*`).
+  - **API Services**: Discovers microservice endpoints (`api.*`, `graphql.*`, `rest.*`, `ws.*`).
+  - **Infrastructure & Storage**: Flags mail relays, nameservers, and cloud object stores (`s3.*`, `cdn.*`, `assets.*`).
+- **Live DNS Probing**: Verifies whether historical subdomains are actively resolving to live IPv4/IPv6 addresses, pinpointing active hosts versus retired DNS records.
+- **Instant Pivot Scanning**: Click **"Scan Target"** next to any discovered subdomain to immediately launch a full security scan on that newly uncovered host.
+- **Export & Filtering**: Real-time category filters, resolving-only toggles, keyword search, one-click clipboard copying, and CSV export.
+
+---
+
+## 🔌 Model Context Protocol (MCP) Hub & Interactive Tool Runner
+
+WEBSCANNER implements the **Model Context Protocol (MCP)** specification (v1.0), enabling AI models, autonomous agents, and security researchers to discover, inspect, and invoke standardized OSINT tools.
+
+### What is Model Context Protocol?
+MCP is an open standard that allows LLMs to query external security databases and tools deterministically through standard JSON-RPC 2.0 schemas.
+
+### Pre-Installed Built-in MCP Servers & Tools
+WEBSCANNER includes 4 operational built-in MCP tools ready to use:
+
+| MCP Server | Tool Name | Category | Description |
+|---|---|---|---|
+| **crt.sh CT Log MCP** | `discover_subdomains` | OSINT | Passive CT log search discovering all registered subdomains and shadow IT assets. |
+| **Wayback Machine CDX MCP** | `search_historical_urls` | RECON | Crawls Internet Archive CDX indices to locate exposed backup files (`.bak`, `.sql`, `.env`), config files, and historical API endpoints. |
+| **DNS Intelligence MCP** | `inspect_dns_intel` | NETWORK | Zone intelligence, MX mail routing, and SPF/DMARC anti-spoofing policy analysis. |
+| **IP & ASN Threat Intel MCP** | `probe_ip_reputation` | INTELLIGENCE | Reverse DNS PTR lookup, RFC 1918 bogon validation, and threat risk analysis. |
+
+### Interactive MCP Hub UI
+Click the **"MCP Hub"** button in the top navigation bar to open the interactive MCP modal:
+- **Server Registry**: View connection status and latency of all connected MCP servers.
+- **Interactive Tool Runner**: Select any tool from the catalog, configure JSON-RPC parameters via dynamic forms, execute the tool call in real time, and inspect structured JSON results with latency diagnostics.
+- **Connect Custom MCP Servers**: Register third-party or local MCP servers over **Streamable HTTP** or **Server-Sent Events (SSE)** with optional Bearer Token authentication.
 
 ---
 
@@ -411,6 +470,70 @@ GET /api/ai-providers
 }
 ```
 
+### 3. Passive Subdomain & CT Logs Enumeration
+```http
+GET /api/osint/subdomains?domain=example.com
+```
+
+#### Response:
+```json
+{
+  "domain": "example.com",
+  "queriedAt": "2026-09-28T19:50:00.000Z",
+  "totalFound": 14,
+  "uniqueSubdomains": ["admin.example.com", "api.example.com", "dev.example.com"],
+  "subdomains": [
+    {
+      "subdomain": "dev.example.com",
+      "category": "DEV_STAGING",
+      "isWildcard": false,
+      "isResolving": true,
+      "resolvedIp": "93.184.216.34",
+      "issuerName": "Let's Encrypt Authority X3",
+      "loggedAt": "2026-04-12T14:22:00Z"
+    }
+  ],
+  "categoriesCount": {
+    "devStaging": 1,
+    "adminPortal": 1,
+    "apiService": 1,
+    "infrastructure": 0,
+    "storage": 0,
+    "general": 0
+  },
+  "hasWildcardCerts": false,
+  "source": "crt.sh (Certificate Transparency Logs)"
+}
+```
+
+### 4. Model Context Protocol (MCP) Tool Execution
+```http
+POST /api/mcp/call
+Content-Type: application/json
+```
+
+#### Request Payload:
+```json
+{
+  "serverId": "crtsh-builtin",
+  "toolName": "discover_subdomains",
+  "arguments": {
+    "domain": "example.com"
+  }
+}
+```
+
+#### Response:
+```json
+{
+  "success": true,
+  "result": { ... },
+  "executionTimeMs": 24,
+  "toolName": "discover_subdomains",
+  "serverId": "crtsh-builtin"
+}
+```
+
 ---
 
 ## 📁 Repository Structure
@@ -426,7 +549,9 @@ GET /api/ai-providers
 ├── README.md                  # Comprehensive documentation and setup guide
 ├── server.ts                  # Express full-stack backend with OSINT probes
 ├── server/
-│   └── aiRouter.ts            # AI-Agnostic Engine (Gemini, OpenAI, Claude, Ollama, Offline)
+│   ├── aiRouter.ts            # AI-Agnostic Engine (Gemini, OpenAI, Claude, Ollama, Offline)
+│   ├── crtShService.ts        # Passive Certificate Transparency (crt.sh) subdomains engine
+│   └── mcpService.ts          # Model Context Protocol (MCP) server registry & JSON-RPC dispatcher
 ├── tsconfig.json              # TypeScript compilation configuration
 ├── vite.config.ts             # Vite bundling and Tailwind CSS v4 configuration
 └── src/
@@ -442,16 +567,18 @@ GET /api/ai-providers
     │   ├── pdfGenerator.ts    # Multi-page vector PDF audit report builder
     │   └── sampleScan.ts      # Curated preloaded security audit demo
     └── components/
-        ├── Header.tsx         # 3-zone header with language selector
+        ├── Header.tsx         # 3-zone header with MCP Hub and language selector
         ├── ScanInput.tsx      # Target input, sample buttons, and live step progress
         ├── ScanOverview.tsx   # Posture score gauge, grade badge, and metric cards
         ├── FlawsList.tsx      # Severity filters and copyable remediation code
         ├── DeployModal.tsx    # Interactive Docker & GitHub deployment guide
+        ├── McpHubModal.tsx    # Interactive Model Context Protocol (MCP) Hub dialog
         ├── AiProviderSelector.tsx # Dynamic AI model and provider switcher
         └── tabs/
             ├── HeadersAudit.tsx      # HTTP security headers matrix
             ├── SslDnsAudit.tsx        # SSL/TLS & SPF/DMARC anti-spoofing audit
             ├── TechPortsAudit.tsx     # Tech stack, open ports & robots.txt
+            ├── SubdomainsAudit.tsx    # Certificate Transparency & Subdomains OSINT tab
             └── AiExecutiveReport.tsx  # CISO Executive threat briefing
 ```
 
