@@ -18,7 +18,7 @@ import {
   executeMcpTool,
   testMcpServer,
 } from './server/mcpService.ts';
-import type {
+import {
   ScanResult,
   SecurityFlaw,
   HeaderCheckResult,
@@ -32,7 +32,9 @@ import type {
   AiProviderId,
   SecurityGrade,
   Severity,
+  AdminAlertPayload,
 } from './src/types/scanner.ts';
+import { auditSoftwareUpdates } from './src/utils/softwareUpdates.ts';
 
 dotenv.config();
 
@@ -1320,6 +1322,40 @@ app.post('/api/scan', async (req: Request, res: Response) => {
       console.log('[OSINT] Passive subdomain query skipped:', err);
     }
 
+    // 8.8. Software & Framework Update Vulnerability Audit
+    const softwareUpdatesData = auditSoftwareUpdates(techStack, rawHeaders, responseBody);
+    for (const updateItem of softwareUpdatesData.items) {
+      if (updateItem.status === 'CRITICAL_UPDATE_REQUIRED') {
+        addFlaw({
+          title: `Critical Outdated Component: ${updateItem.name} (${updateItem.detectedVersion || 'Legacy'} ➔ ${updateItem.latestVersion})`,
+          category: 'INFO_DISCLOSURE',
+          severity: 'CRITICAL',
+          cvssScore: 9.3,
+          owaspCategory: 'A06:2021 Vulnerable and Outdated Components',
+          description: updateItem.riskSummary,
+          impact: 'Known published CVEs allow automated remote exploit toolkits to target outdated software daemons.',
+          evidence: `Detected: ${updateItem.name} ${updateItem.detectedVersion || 'Outdated'}, Latest Secure: ${updateItem.latestVersion}`,
+          remediation: updateItem.remediation.commandGuide,
+          remediationCode: {
+            nginx: updateItem.remediation.cliCommands.debianUbuntu || '',
+            apache: updateItem.remediation.cliCommands.rhelCentos || '',
+          },
+        });
+      } else if (updateItem.status === 'UPDATE_RECOMMENDED' && updateItem.cves.length > 0) {
+        addFlaw({
+          title: `Software Update Recommended: ${updateItem.name} (${updateItem.cves.length} Known CVEs)`,
+          category: 'INFO_DISCLOSURE',
+          severity: 'HIGH',
+          cvssScore: 7.5,
+          owaspCategory: 'A06:2021 Vulnerable and Outdated Components',
+          description: updateItem.riskSummary,
+          impact: 'Components with known CVEs facilitate technology-specific exploits.',
+          evidence: `${updateItem.cves.map(c => c.cveId).join(', ')}`,
+          remediation: updateItem.remediation.commandGuide,
+        });
+      }
+    }
+
     // 9. Compute Overall Security Score & Letter Grade
     let score = 100;
     const flawsCount = {
@@ -1408,6 +1444,7 @@ app.post('/api/scan', async (req: Request, res: Response) => {
       securityTxt: securityTxtData,
       aiAnalysis,
       subdomains: subdomainsData,
+      softwareUpdates: softwareUpdatesData,
     };
 
     res.json(scanResult);
@@ -1416,6 +1453,156 @@ app.post('/api/scan', async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Vulnerability scan processing failed: ' + (err?.message || 'Unknown server error'),
     });
+  }
+});
+
+// Administrator Security Alert Dispatcher (Webhooks & Email Notifications)
+app.post('/api/alerts/dispatch', async (req: Request, res: Response) => {
+  try {
+    const payload: AdminAlertPayload = req.body;
+    if (!payload.hostname) {
+      res.status(400).json({ error: 'Missing hostname in alert payload' });
+      return;
+    }
+
+    const channel = payload.channel || 'slack';
+    let deliveryStatus = 'simulated';
+    let httpCode = 200;
+    let message = 'Alert prepared successfully';
+
+    if (payload.webhookUrl && payload.webhookUrl.startsWith('http')) {
+      try {
+        if (channel === 'slack') {
+          const slackBody = {
+            text: `🚨 *SECURITY INCIDENT ALERT:* ${payload.hostname} (Grade: ${payload.securityGrade}, Score: ${payload.overallScore}/100)`,
+            blocks: [
+              {
+                type: 'header',
+                text: {
+                  type: 'plain_text',
+                  text: `🚨 SECURITY INCIDENT: ${payload.hostname}`,
+                  emoji: true,
+                },
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `*Target URL:* ${payload.targetUrl}\n*Security Posture:* Grade \`${payload.securityGrade}\` (*${payload.overallScore}/100*)\n*Critical Flaws:* *${payload.criticalFlawsCount}* | *High Flaws:* *${payload.highFlawsCount}*\n*Pending Outdated Component Updates:* *${payload.outdatedUpdatesCount}*`,
+                },
+              },
+              {
+                type: 'divider',
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `*Top Flaws Requiring Attention:*\n${
+                    payload.vulnerabilities.slice(0, 4).map((v) => `• *[${v.severity}]* ${v.title}`).join('\n') || 'None'
+                  }`,
+                },
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `*Outdated Software & Required Updates:*\n${
+                    payload.missingUpdates.slice(0, 4).map((u) => `• *${u.name}*: \`${u.detectedVersion || 'Legacy'}\` ➔ \`${u.latestVersion}\` (${u.status})`).join('\n') || 'All components patched.'
+                  }`,
+                },
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `*Administrator Remediation:* Run patch remediation playbook script on target server infrastructure.`,
+                },
+              },
+            ],
+          };
+
+          const webhookRes = await fetch(payload.webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(slackBody),
+          });
+          httpCode = webhookRes.status;
+          deliveryStatus = webhookRes.ok ? 'delivered' : 'failed';
+          message = webhookRes.ok ? 'Slack webhook alert delivered' : `Slack returned status ${webhookRes.status}`;
+        } else if (channel === 'discord') {
+          const discordBody = {
+            username: 'WEBSCANNER Alert Bot',
+            embeds: [
+              {
+                title: `🚨 Security Alert: ${payload.hostname}`,
+                description: `Vulnerability scan completed with urgent remediation items for **${payload.hostname}**.\n**Overall Posture:** Grade ${payload.securityGrade} (${payload.overallScore}/100)`,
+                color: payload.criticalFlawsCount > 0 ? 0xEF4444 : 0xF59E0B,
+                fields: [
+                  { name: 'Critical Flaws', value: `${payload.criticalFlawsCount}`, inline: true },
+                  { name: 'High Flaws', value: `${payload.highFlawsCount}`, inline: true },
+                  { name: 'Outdated Components', value: `${payload.outdatedUpdatesCount}`, inline: true },
+                  {
+                    name: 'Top Vulnerabilities',
+                    value: payload.vulnerabilities.slice(0, 4).map((v) => `• [${v.severity}] ${v.title}`).join('\n') || 'None',
+                  },
+                  {
+                    name: 'Pending Updates',
+                    value: payload.missingUpdates.slice(0, 3).map((u) => `• **${u.name}**: ${u.detectedVersion || 'legacy'} -> ${u.latestVersion}`).join('\n') || 'None',
+                  },
+                ],
+                footer: { text: `WEBSCANNER Incident Alert • ${new Date().toISOString()}` },
+              },
+            ],
+          };
+
+          const webhookRes = await fetch(payload.webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(discordBody),
+          });
+          httpCode = webhookRes.status;
+          deliveryStatus = webhookRes.ok ? 'delivered' : 'failed';
+          message = webhookRes.ok ? 'Discord webhook alert delivered' : `Discord returned status ${webhookRes.status}`;
+        } else {
+          // Generic Webhook / SIEM / PagerDuty
+          const webhookRes = await fetch(payload.webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          httpCode = webhookRes.status;
+          deliveryStatus = webhookRes.ok ? 'delivered' : 'failed';
+          message = webhookRes.ok ? 'Generic webhook alert delivered' : `Webhook returned status ${webhookRes.status}`;
+        }
+      } catch (postErr: any) {
+        deliveryStatus = 'network_error';
+        message = `Failed to contact webhook endpoint: ${postErr?.message || 'Connection error'}`;
+      }
+    } else {
+      deliveryStatus = channel === 'email' ? 'email_prepared' : 'simulated';
+      message = channel === 'email'
+        ? `Security incident advisory generated for administrator: ${payload.adminEmail || 'admin@' + payload.hostname}`
+        : 'Webhook payload formatted and ready for dispatch.';
+    }
+
+    res.json({
+      success: deliveryStatus === 'delivered' || deliveryStatus === 'email_prepared' || deliveryStatus === 'simulated',
+      channel,
+      deliveryStatus,
+      message,
+      httpCode,
+      recipient: payload.adminEmail || payload.webhookUrl || 'Admin Security Team',
+      dispatchedAt: new Date().toISOString(),
+      payloadSummary: {
+        hostname: payload.hostname,
+        score: payload.overallScore,
+        criticalFlaws: payload.criticalFlawsCount,
+        missingUpdates: payload.outdatedUpdatesCount,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Alert dispatch failed: ' + (err?.message || 'Internal error') });
   }
 });
 

@@ -1,4 +1,5 @@
 import type { ScanResult } from '../types/scanner';
+import { auditSoftwareUpdates } from './softwareUpdates';
 
 export const SAMPLE_SCAN_RESULT: ScanResult = {
   id: 'SCAN-SAMPLE-AUDIT',
@@ -393,4 +394,17 @@ export const SAMPLE_SCAN_RESULT: ScanResult = {
     hasWildcardCerts: true,
     source: 'crt.sh (Certificate Transparency Logs)',
   },
+  softwareUpdates: auditSoftwareUpdates(
+    [
+      { name: 'Apache/2.4.49', category: 'Server', version: '2.4.49' },
+      { name: 'PHP/7.4.33', category: 'Language', version: '7.4.33' },
+      { name: 'WordPress 5.8', category: 'CMS', version: '5.8.0' },
+      { name: 'jQuery 1.12.4', category: 'Framework', version: '1.12.4' },
+    ],
+    {
+      server: 'Apache/2.4.49 (Debian)',
+      'x-powered-by': 'PHP/7.4.33',
+    },
+    'wp-content/themes/legacy-theme'
+  ),
 };

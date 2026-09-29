@@ -8,6 +8,8 @@ import { SslDnsAudit } from './components/tabs/SslDnsAudit';
 import { TechPortsAudit } from './components/tabs/TechPortsAudit';
 import { SubdomainsAudit } from './components/tabs/SubdomainsAudit';
 import { AiExecutiveReport } from './components/tabs/AiExecutiveReport';
+import { UpdatesAudit } from './components/tabs/UpdatesAudit';
+import { AdminAlertModal } from './components/AdminAlertModal';
 import { generateAuditPdf } from './utils/pdfGenerator';
 import { SAMPLE_SCAN_RESULT } from './utils/sampleScan';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
@@ -48,6 +50,7 @@ function ScannerContent() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [scanHistory, setScanHistory] = useState<HistoryScanEntry[]>(() => {
     return getScanHistory();
   });
@@ -124,6 +127,7 @@ function ScannerContent() {
         setIsMcpModalOpen(false);
         setIsDeployModalOpen(false);
         setIsMobileModalOpen(false);
+        setIsAlertModalOpen(false);
         return;
       }
 
@@ -142,15 +146,16 @@ function ScannerContent() {
         return;
       }
 
-      // Quick tab switching 1-7
+      // Quick tab switching 1-8
       if (scanResult && !isEditing && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === '1') setActiveTab('overview');
         else if (e.key === '2') setActiveTab('flaws');
         else if (e.key === '3') setActiveTab('headers');
         else if (e.key === '4') setActiveTab('ssl_dns');
         else if (e.key === '5') setActiveTab('tech_ports');
-        else if (e.key === '6') setActiveTab('subdomains');
-        else if (e.key === '7') setActiveTab('ai_report');
+        else if (e.key === '6') setActiveTab('updates');
+        else if (e.key === '7') setActiveTab('subdomains');
+        else if (e.key === '8') setActiveTab('ai_report');
       }
     };
 
@@ -313,11 +318,21 @@ function ScannerContent() {
         onOpenBulkScan={() => setIsBulkModalOpen(true)}
         onOpenMcpHub={() => setIsMcpModalOpen(true)}
         onOpenHistory={() => setIsHistoryModalOpen(true)}
+        onOpenAlertModal={() => setIsAlertModalOpen(true)}
         historyCount={scanHistory.length}
         isScanning={isScanning}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
+
+      {/* Administrator Security Alert & Webhook Dispatcher Modal */}
+      {scanResult && (
+        <AdminAlertModal
+          isOpen={isAlertModalOpen}
+          onClose={() => setIsAlertModalOpen(false)}
+          scan={scanResult}
+        />
+      )}
 
       {/* Deploy & GitHub Instructions Modal */}
       <DeployModal
@@ -485,6 +500,7 @@ function ScannerContent() {
               scan={scanResult}
               onExportPdf={handleExportPdf}
               onSelectTab={setActiveTab}
+              onOpenAlertModal={() => setIsAlertModalOpen(true)}
             />
 
             {/* Tab Navigation for Mobile */}
@@ -495,6 +511,7 @@ function ScannerContent() {
                 { id: 'headers', label: t.navHeaders },
                 { id: 'ssl_dns', label: t.navSslDns },
                 { id: 'tech_ports', label: t.navTechPorts },
+                { id: 'updates', label: `Updates (${scanResult.softwareUpdates?.outdatedCount || 0})` },
                 { id: 'subdomains', label: `${t.navSubdomains} (${scanResult.subdomains?.totalFound || 0})` },
                 { id: 'ai_report', label: t.navExecutive },
               ].map((tab) => (
@@ -602,6 +619,13 @@ function ScannerContent() {
                 sensitiveEndpoints={scanResult.sensitiveEndpoints}
                 robotsTxt={scanResult.robotsTxt}
                 securityTxt={scanResult.securityTxt}
+              />
+            )}
+
+            {activeTab === 'updates' && (
+              <UpdatesAudit
+                scan={scanResult}
+                onOpenAlertModal={() => setIsAlertModalOpen(true)}
               />
             )}
 

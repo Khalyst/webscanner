@@ -12,6 +12,8 @@ import {
   Layers,
   Share2,
   Check,
+  BellRing,
+  PackageCheck,
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { ScanResult } from '../types/scanner';
@@ -20,9 +22,15 @@ interface ScanOverviewProps {
   scan: ScanResult;
   onExportPdf: () => void;
   onSelectTab: (tab: string) => void;
+  onOpenAlertModal?: () => void;
 }
 
-export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, onSelectTab }) => {
+export const ScanOverview: React.FC<ScanOverviewProps> = ({
+  scan,
+  onExportPdf,
+  onSelectTab,
+  onOpenAlertModal,
+}) => {
   const { t } = useLanguage();
   const [isSummaryCopied, setIsSummaryCopied] = useState(false);
 
@@ -222,6 +230,24 @@ export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, o
         </button>
 
         <button
+          onClick={() => onSelectTab('updates')}
+          className="text-left p-3 rounded-lg bg-slate-950/40 border border-slate-800/80 hover:border-amber-500/40 transition-colors cursor-pointer group"
+          title="Component Security Updates & CVEs"
+        >
+          <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
+            <span>Updates</span>
+            <PackageCheck className="w-3.5 h-3.5 text-amber-400" />
+          </div>
+          <div
+            className={`text-xl font-bold font-mono mt-1 tabular-nums group-hover:scale-105 transition-transform origin-left ${
+              (scan.softwareUpdates?.outdatedCount ?? 0) > 0 ? 'text-amber-400' : 'text-emerald-400'
+            }`}
+          >
+            {scan.softwareUpdates?.outdatedCount ?? 0}
+          </div>
+        </button>
+
+        <button
           onClick={() => onSelectTab('subdomains')}
           className="text-left p-3 rounded-lg bg-slate-950/40 border border-slate-800/80 hover:border-purple-500/40 transition-colors cursor-pointer group"
           title="Discovered Subdomains via Certificate Transparency OSINT"
@@ -236,9 +262,20 @@ export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, o
         </button>
 
         <div className="flex flex-col sm:flex-row lg:flex-col gap-2 col-span-2 sm:col-span-2 lg:col-span-1 justify-center">
+          {onOpenAlertModal && (
+            <button
+              onClick={onOpenAlertModal}
+              className="flex-1 min-h-[34px] px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/40 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              title="Dispatch incident alert to administrator (Slack, Discord, Email, Webhook)"
+            >
+              <BellRing className="w-3.5 h-3.5 text-rose-400 shrink-0 animate-pulse" />
+              <span className="truncate">Alert Admin</span>
+            </button>
+          )}
+
           <button
             onClick={onExportPdf}
-            className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="flex-1 min-h-[34px] px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
             title="Download multi-page PDF audit report"
           >
             <FileDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
@@ -247,7 +284,7 @@ export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, o
 
           <button
             onClick={handleCopySummary}
-            className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="flex-1 min-h-[34px] px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
             title="Copy formatted markdown audit summary for Slack, Discord, or GitHub"
           >
             {isSummaryCopied ? (

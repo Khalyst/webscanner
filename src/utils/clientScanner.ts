@@ -1,4 +1,5 @@
 import type { ScanResult, SecurityFlaw, HeaderCheckResult, SecurityGrade } from '../types/scanner';
+import { auditSoftwareUpdates } from './softwareUpdates';
 
 export function generateClientSideAudit(inputUrl: string, lang = 'en'): ScanResult {
   let cleaned = inputUrl.trim();
@@ -333,5 +334,13 @@ export function generateClientSideAudit(inputUrl: string, lang = 'en'): ScanResu
       hasWildcardCerts: false,
       source: 'crt.sh (Certificate Transparency Logs)',
     },
+    softwareUpdates: auditSoftwareUpdates(
+      [
+        { name: 'Web Server', category: 'Server' },
+        { name: 'HTML5', category: 'Framework' },
+      ],
+      {},
+      ''
+    ),
   };
 }

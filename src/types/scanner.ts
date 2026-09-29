@@ -231,6 +231,79 @@ export interface ScanResult {
   };
   aiAnalysis?: AiAnalysis;
   subdomains?: SubdomainAudit;
+  softwareUpdates?: SoftwareUpdateAudit;
+}
+
+export type SoftwareUpdateStatus = 'CRITICAL_UPDATE_REQUIRED' | 'UPDATE_RECOMMENDED' | 'UP_TO_DATE' | 'UNKNOWN_VERSION';
+
+export interface SoftwareUpdateItem {
+  id: string;
+  name: string;
+  category: 'Server' | 'CMS' | 'Framework' | 'Runtime' | 'Database' | 'Library';
+  detectedVersion?: string;
+  latestVersion: string;
+  isOutdated: boolean;
+  isEndOfLife?: boolean;
+  status: SoftwareUpdateStatus;
+  releaseDate?: string;
+  daysOutdated?: number;
+  cves: Array<{
+    cveId: string;
+    summary: string;
+    severity: Severity;
+    cvssScore?: number;
+  }>;
+  riskSummary: string;
+  remediation: {
+    commandGuide: string;
+    cliCommands: {
+      debianUbuntu?: string;
+      rhelCentos?: string;
+      docker?: string;
+      generic?: string;
+    };
+    patchAdvisoryUrl?: string;
+  };
+}
+
+export interface SoftwareUpdateAudit {
+  totalComponents: number;
+  outdatedCount: number;
+  criticalUpdatesCount: number;
+  items: SoftwareUpdateItem[];
+  overallStatus: 'CRITICAL_ACTION_REQUIRED' | 'UPDATES_PENDING' | 'SECURE';
+  generatedAt: string;
+  patchScript: string;
+}
+
+export interface AdminAlertPayload {
+  targetUrl: string;
+  hostname: string;
+  adminEmail?: string;
+  webhookUrl?: string;
+  channel: 'slack' | 'discord' | 'email' | 'webhook';
+  alertSeverity: 'CRITICAL' | 'HIGH' | 'ALL';
+  criticalFlawsCount: number;
+  highFlawsCount: number;
+  outdatedUpdatesCount: number;
+  overallScore: number;
+  securityGrade: string;
+  vulnerabilities: Array<{
+    title: string;
+    severity: string;
+    category: string;
+    description: string;
+    remediation: string;
+  }>;
+  missingUpdates: Array<{
+    name: string;
+    detectedVersion?: string;
+    latestVersion: string;
+    status: string;
+    remediation: string;
+  }>;
+  remediationScript: string;
+  timestamp: string;
 }
 
 export type SubdomainCategory = 'DEV_STAGING' | 'ADMIN_PORTAL' | 'API_SERVICE' | 'INFRASTRUCTURE' | 'STORAGE' | 'GENERAL';

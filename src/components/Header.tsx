@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone, Layers, Network, History } from 'lucide-react';
+import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone, Layers, Network, History, BellRing } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { SupportedLanguage } from '../i18n/translations';
 import type { ScanResult } from '../types/scanner';
@@ -13,6 +13,7 @@ interface HeaderProps {
   onOpenBulkScan: () => void;
   onOpenMcpHub: () => void;
   onOpenHistory?: () => void;
+  onOpenAlertModal?: () => void;
   historyCount?: number;
   isScanning: boolean;
   activeTab: string;
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBulkScan,
   onOpenMcpHub,
   onOpenHistory,
+  onOpenAlertModal,
   historyCount = 0,
   isScanning,
   activeTab,
@@ -53,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'headers', label: t.navHeaders },
     { id: 'ssl_dns', label: t.navSslDns },
     { id: 'tech_ports', label: t.navTechPorts },
+    { id: 'updates', label: `Updates (${currentScan?.softwareUpdates?.outdatedCount ?? 0})` },
     { id: 'subdomains', label: `${t.navSubdomains} (${currentScan?.subdomains?.totalFound ?? 0})` },
     { id: 'ai_report', label: t.navExecutive },
   ];
@@ -213,6 +216,18 @@ export const Header: React.FC<HeaderProps> = ({
 
           {currentScan && (
             <>
+              {onOpenAlertModal && (
+                <button
+                  onClick={onOpenAlertModal}
+                  disabled={isScanning}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 rounded-lg transition-colors whitespace-nowrap cursor-pointer shadow-sm"
+                  title="Dispatch security incident alert to administrator (Slack/Discord/Email/SIEM)"
+                >
+                  <BellRing className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                  <span className="hidden sm:inline">Alert Admin</span>
+                </button>
+              )}
+
               <button
                 onClick={onExportPdf}
                 disabled={isScanning}
