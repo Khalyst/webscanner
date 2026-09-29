@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone, Layers, Network } from 'lucide-react';
+import { ShieldAlert, FileDown, RefreshCw, Terminal, Globe, ChevronDown, Check, Container, Smartphone, Layers, Network, History } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { SupportedLanguage } from '../i18n/translations';
 import type { ScanResult } from '../types/scanner';
@@ -12,6 +12,8 @@ interface HeaderProps {
   onOpenMobile: () => void;
   onOpenBulkScan: () => void;
   onOpenMcpHub: () => void;
+  onOpenHistory?: () => void;
+  historyCount?: number;
   isScanning: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -25,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobile,
   onOpenBulkScan,
   onOpenMcpHub,
+  onOpenHistory,
+  historyCount = 0,
   isScanning,
   activeTab,
   setActiveTab,
@@ -149,6 +153,23 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {/* Recent Audits History Trigger */}
+          {onOpenHistory && (
+            <button
+              onClick={onOpenHistory}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-cyan-300 bg-slate-900/90 hover:bg-slate-800 rounded-lg border border-slate-800 hover:border-cyan-500/50 transition-colors cursor-pointer select-none"
+              title="View recent security audits history (Press H)"
+            >
+              <History className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">History</span>
+              {historyCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800/80 font-bold">
+                  {historyCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* MCP & OSINT Hub Trigger */}
           <button

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -10,6 +10,8 @@ import {
   FileDown,
   ExternalLink,
   Layers,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { ScanResult } from '../types/scanner';
@@ -22,6 +24,30 @@ interface ScanOverviewProps {
 
 export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, onSelectTab }) => {
   const { t } = useLanguage();
+  const [isSummaryCopied, setIsSummaryCopied] = useState(false);
+
+  const handleCopySummary = () => {
+    const dateStr = new Date(scan.scanTimestamp).toUTCString();
+    const subCount = scan.subdomains?.totalFound ?? 0;
+    const topFlaw = scan.flaws[0]?.title || 'No critical issues identified';
+
+    const text = [
+      `🛡️ WEBSCANNER Security Audit Summary`,
+      `🎯 Target: ${scan.hostname} (${scan.finalUrl})`,
+      `📊 Posture Score: ${scan.overallScore}/100 · Grade: ${scan.securityGrade}`,
+      `🚨 Findings: ${scan.flawsCount.critical} Critical · ${scan.flawsCount.high} High · ${scan.flawsCount.medium} Medium · ${scan.flawsCount.low} Low`,
+      `🔒 SSL/TLS: ${scan.sslInfo?.valid ? `Valid (${scan.sslInfo.daysRemaining} days left, ${scan.sslInfo.protocol})` : 'Invalid / Insecure'}`,
+      `🌐 Subdomains: ${subCount} discovered via CT logs`,
+      `⚡ Latency: ${scan.responseTimeMs}ms · IP: ${scan.ip || 'Unresolved'}`,
+      `🛠️ Top Priority Fix: ${topFlaw}`,
+      `🕒 Audited: ${dateStr}`,
+      `Audited with WEBSCANNER`,
+    ].join('\n');
+
+    navigator.clipboard.writeText(text);
+    setIsSummaryCopied(true);
+    setTimeout(() => setIsSummaryCopied(false), 2500);
+  };
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
@@ -209,13 +235,32 @@ export const ScanOverview: React.FC<ScanOverviewProps> = ({ scan, onExportPdf, o
           </div>
         </button>
 
-        <div className="flex items-center gap-2 col-span-2 sm:col-span-1 lg:col-span-1">
+        <div className="flex flex-col sm:flex-row lg:flex-col gap-2 col-span-2 sm:col-span-2 lg:col-span-1 justify-center">
           <button
             onClick={onExportPdf}
-            className="w-full h-full min-h-[58px] px-3 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
+            className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            title="Download multi-page PDF audit report"
           >
-            <FileDown className="w-4 h-4 text-cyan-400" />
-            <span>{t.exportPdf}</span>
+            <FileDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span className="truncate">{t.exportPdf}</span>
+          </button>
+
+          <button
+            onClick={handleCopySummary}
+            className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            title="Copy formatted markdown audit summary for Slack, Discord, or GitHub"
+          >
+            {isSummaryCopied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="text-emerald-300">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span className="truncate">Share</span>
+              </>
+            )}
           </button>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Search, Globe, Sparkles, ArrowRight, Layers } from 'lucide-react';
+import { Search, Globe, Sparkles, ArrowRight, Layers, History } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { AiProviderSelector } from './AiProviderSelector';
-import type { AiProviderId, CustomAiConfig } from '../types/scanner';
+import type { AiProviderId, CustomAiConfig, ScanResult } from '../types/scanner';
+import type { HistoryScanEntry } from '../utils/scanHistory';
 
 interface ScanInputProps {
   onScan: (url: string, deepAiScan: boolean, provider: AiProviderId, model: string, customConfig?: CustomAiConfig) => void;
@@ -13,6 +14,10 @@ interface ScanInputProps {
   selectedModel: string;
   customConfig?: CustomAiConfig;
   onSelectProvider: (provider: AiProviderId, model: string, customConfig?: CustomAiConfig) => void;
+  recentScans?: HistoryScanEntry[];
+  onSelectRecentScan?: (scan: ScanResult) => void;
+  onOpenHistory?: () => void;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 const SAMPLE_TARGETS = [
@@ -31,6 +36,10 @@ export const ScanInput: React.FC<ScanInputProps> = ({
   selectedModel,
   customConfig,
   onSelectProvider,
+  recentScans = [],
+  onSelectRecentScan,
+  onOpenHistory,
+  inputRef,
 }) => {
   const { t } = useLanguage();
   const [url, setUrl] = useState('');
@@ -45,6 +54,12 @@ export const ScanInput: React.FC<ScanInputProps> = ({
   const handleSelectSample = (sampleUrl: string) => {
     setUrl(sampleUrl);
     onScan(sampleUrl, deepAiScan, selectedProvider, selectedModel, customConfig);
+  };
+
+  const getScoreBadgeClass = (score: number) => {
+    if (score >= 80) return 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60';
+    if (score >= 60) return 'text-amber-400 bg-amber-950/60 border-amber-800/60';
+    return 'text-rose-400 bg-rose-950/60 border-rose-800/60';
   };
 
   return (
@@ -68,6 +83,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({
           <div className="flex items-center flex-1 px-3 py-2 text-slate-400">
             <Globe className="w-5 h-5 text-slate-500 mr-3 shrink-0" />
             <input
+              ref={inputRef}
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -75,6 +91,9 @@ export const ScanInput: React.FC<ScanInputProps> = ({
               disabled={isScanning}
               className="w-full bg-transparent text-white placeholder-slate-500 text-sm sm:text-base focus:outline-none font-mono"
             />
+            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-400 select-none mr-1 shrink-0">
+              / or ⌘K
+            </span>
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-2 px-2 sm:px-0 flex-wrap">
@@ -156,16 +175,53 @@ export const ScanInput: React.FC<ScanInputProps> = ({
         </div>
       )}
 
+      {/* Recent Audits Chips */}
+      {!isScanning && recentScans.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+          <span className="text-slate-500 font-mono flex items-center gap-1">
+            <History className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Recent Audits:</span>
+          </span>
+          {recentScans.slice(0, 4).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelectRecentScan?.(item.scanResult)}
+              className="px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-cyan-500/40 font-mono transition-colors flex items-center gap-1.5 cursor-pointer text-xs group"
+              title={`Load audit for ${item.hostname} (${item.overallScore}/100)`}
+            >
+              <span className="font-semibold group-hover:text-white">{item.hostname}</span>
+              <span
+                className={`px-1.5 py-0.2 rounded border text-[10px] font-bold ${getScoreBadgeClass(
+                  item.overallScore
+                )}`}
+              >
+                {item.securityGrade} · {item.overallScore}
+              </span>
+            </button>
+          ))}
+          {onOpenHistory && (
+            <button
+              type="button"
+              onClick={onOpenHistory}
+              className="text-cyan-400 hover:text-cyan-300 font-mono text-xs underline underline-offset-2 ml-1 cursor-pointer"
+            >
+              All History ({recentScans.length}) →
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Quick Target Presets */}
       {!isScanning && (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
           <span className="mr-1">{t.sampleAudits}</span>
           {SAMPLE_TARGETS.map((sample) => (
             <button
               key={sample.label}
               type="button"
               onClick={() => handleSelectSample(sample.url)}
-              className="px-2.5 py-1 rounded-md bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-800/80 hover:border-slate-700 font-mono transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="px-2.5 py-1 rounded-md bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800/80 hover:border-slate-700 font-mono transition-colors flex items-center gap-1.5 cursor-pointer text-xs"
             >
               <span>{sample.label}</span>
               <ArrowRight className="w-2.5 h-2.5 text-slate-500" />

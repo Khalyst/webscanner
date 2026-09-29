@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { ScanInput } from './components/ScanInput';
 import { ScanOverview } from './components/ScanOverview';
@@ -15,8 +15,16 @@ import { DeployModal } from './components/DeployModal';
 import { MobileDownloadModal } from './components/MobileDownloadModal';
 import { BulkScannerModal } from './components/BulkScannerModal';
 import { McpHubModal } from './components/McpHubModal';
+import { RecentScansModal } from './components/RecentScansModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import {
+  getScanHistory,
+  saveScanToHistory,
+  removeScanFromHistory,
+  clearScanHistory,
+  type HistoryScanEntry,
+} from './utils/scanHistory';
 import type { ScanResult, AiProviderId, CustomAiConfig } from './types/scanner';
 import {
   ShieldAlert,
@@ -38,6 +46,11 @@ function ScannerContent() {
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [scanHistory, setScanHistory] = useState<HistoryScanEntry[]>(() => {
+    return getScanHistory();
+  });
+  const scanInputRef = useRef<HTMLInputElement>(null);
   const [selectedAiProvider, setSelectedAiProvider] = useState<AiProviderId>(() => {
     try {
       const saved = localStorage.getItem('webscanner_ai_provider');
@@ -94,6 +107,68 @@ function ScannerContent() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isEditing =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+
+      // Escape closes any active modal
+      if (e.key === 'Escape') {
+        setIsHistoryModalOpen(false);
+        setIsBulkModalOpen(false);
+        setIsMcpModalOpen(false);
+        setIsDeployModalOpen(false);
+        setIsMobileModalOpen(false);
+        return;
+      }
+
+      // Ctrl+K or Cmd+K or "/" focuses scan input
+      if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (e.key === '/' && !isEditing)) {
+        e.preventDefault();
+        scanInputRef.current?.focus();
+        scanInputRef.current?.select();
+        return;
+      }
+
+      // "H" or "h" opens History modal when not typing
+      if ((e.key === 'h' || e.key === 'H') && !isEditing && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setIsHistoryModalOpen((prev) => !prev);
+        return;
+      }
+
+      // Quick tab switching 1-7
+      if (scanResult && !isEditing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === '1') setActiveTab('overview');
+        else if (e.key === '2') setActiveTab('flaws');
+        else if (e.key === '3') setActiveTab('headers');
+        else if (e.key === '4') setActiveTab('ssl_dns');
+        else if (e.key === '5') setActiveTab('tech_ports');
+        else if (e.key === '6') setActiveTab('subdomains');
+        else if (e.key === '7') setActiveTab('ai_report');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [scanResult]);
+
+  const handleDeleteHistoryEntry = (id: string) => {
+    const updated = removeScanFromHistory(id);
+    setScanHistory(updated);
+    showToast('Removed audit from history', 'info');
+  };
+
+  const handleClearAllHistory = () => {
+    clearScanHistory();
+    setScanHistory([]);
+    showToast('Audit history cleared', 'info');
+  };
+
   const handleQuickScan = (targetUrl: string) => {
     handleScan(targetUrl, true, selectedAiProvider, selectedAiModel, customAiConfig);
     setActiveTab('overview');
@@ -145,6 +220,8 @@ function ScannerContent() {
 
       const result: ScanResult = await response.json();
       setScanResult(result);
+      const updatedHistory = saveScanToHistory(result);
+      setScanHistory(updatedHistory);
       setActiveTab('overview');
       showToast(`${t.navOverview}: ${result.hostname} (${result.flaws.length} ${t.navFlaws.toLowerCase()})`, 'success');
     } catch (err: any) {
@@ -170,6 +247,8 @@ function ScannerContent() {
 
   const handleLoadSample = () => {
     setScanResult(SAMPLE_SCAN_RESULT);
+    const updatedHistory = saveScanToHistory(SAMPLE_SCAN_RESULT);
+    setScanHistory(updatedHistory);
     setActiveTab('overview');
     showToast(t.sampleAuditBannerTitle, 'info');
   };
@@ -212,6 +291,8 @@ function ScannerContent() {
         onOpenMobile={() => setIsMobileModalOpen(true)}
         onOpenBulkScan={() => setIsBulkModalOpen(true)}
         onOpenMcpHub={() => setIsMcpModalOpen(true)}
+        onOpenHistory={() => setIsHistoryModalOpen(true)}
+        historyCount={scanHistory.length}
         isScanning={isScanning}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -252,6 +333,23 @@ function ScannerContent() {
         onScanTarget={handleQuickScan}
       />
 
+      {/* Recent Audits History Modal */}
+      <RecentScansModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        history={scanHistory}
+        onSelectScan={(scan) => {
+          setScanResult(scan);
+          setActiveTab('overview');
+          showToast(`Loaded audit: ${scan.hostname}`, 'info');
+        }}
+        onRescan={(url) => {
+          handleScan(url, true);
+        }}
+        onDeleteEntry={handleDeleteHistoryEntry}
+        onClearHistory={handleClearAllHistory}
+      />
+
       {/* Offline Status Indicator */}
       <OfflineIndicator />
 
@@ -267,6 +365,14 @@ function ScannerContent() {
           selectedModel={selectedAiModel}
           customConfig={customAiConfig}
           onSelectProvider={handleSelectAiProvider}
+          recentScans={scanHistory}
+          onSelectRecentScan={(scan) => {
+            setScanResult(scan);
+            setActiveTab('overview');
+            showToast(`Loaded audit: ${scan.hostname}`, 'info');
+          }}
+          onOpenHistory={() => setIsHistoryModalOpen(true)}
+          inputRef={scanInputRef}
         />
 
         {/* Error Notification */}
@@ -427,7 +533,12 @@ function ScannerContent() {
                     </button>
                   </div>
 
-                  <FlawsList flaws={scanResult.flaws} />
+                  <FlawsList
+                    flaws={scanResult.flaws}
+                    initialScore={scanResult.overallScore}
+                    initialGrade={scanResult.securityGrade}
+                    hostname={scanResult.hostname}
+                  />
                 </div>
               </div>
             )}
@@ -442,7 +553,12 @@ function ScannerContent() {
                     {t.techVulnerabilityAnalysis}
                   </p>
                 </div>
-                <FlawsList flaws={scanResult.flaws} />
+                <FlawsList
+                  flaws={scanResult.flaws}
+                  initialScore={scanResult.overallScore}
+                  initialGrade={scanResult.securityGrade}
+                  hostname={scanResult.hostname}
+                />
               </div>
             )}
 
