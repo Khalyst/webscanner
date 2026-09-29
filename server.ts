@@ -62,7 +62,7 @@ app.use((req, res, next) => {
 });
 
 // Available AI Providers API
-app.get('/api/ai-providers', (_req: Request, res: Response) => {
+app.get(['/api/ai-providers', '/api/ai/providers'], (_req: Request, res: Response) => {
   res.json(getAvailableAiProviders());
 });
 
