@@ -40,9 +40,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const args = process.argv.slice(2);
+const portArgIndex = args.indexOf('--port');
+const argPort = portArgIndex !== -1 ? Number(args[portArgIndex + 1]) : null;
+const PORT = argPort || 3000;
 
 app.use(express.json());
+
+// Enable CORS for all API routes (supports cross-domain preview, PWA, and direct access)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
 
 // Available AI Providers API
 app.get('/api/ai-providers', (_req: Request, res: Response) => {

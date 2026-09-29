@@ -110,7 +110,7 @@ export async function queryCrtShSubdomains(inputDomain: string): Promise<Subdoma
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const crtUrl = `https://crt.sh/?q=%.${encodeURIComponent(rootDomain)}&output=json`;
     const res = await fetch(crtUrl, {

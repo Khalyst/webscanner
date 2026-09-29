@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Globe, Sparkles, ArrowRight, Layers, History } from 'lucide-react';
+import { Search, Globe, Sparkles, ArrowRight, Layers, History, X } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { AiProviderSelector } from './AiProviderSelector';
 import type { AiProviderId, CustomAiConfig, ScanResult } from '../types/scanner';
@@ -45,10 +45,18 @@ export const ScanInput: React.FC<ScanInputProps> = ({
   const [url, setUrl] = useState('');
   const [deepAiScan, setDeepAiScan] = useState(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim() || isScanning) return;
-    onScan(url.trim(), deepAiScan, selectedProvider, selectedModel, customConfig);
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    let cleanUrl = url.trim();
+    if (!cleanUrl || isScanning) return;
+
+    // Remove surrounding quotes, angle brackets, or markdown delimiters
+    cleanUrl = cleanUrl.replace(/^["'<`\(\[]+|["'>`\)\]]+$/g, '').trim();
+
+    onScan(cleanUrl, deepAiScan, selectedProvider, selectedModel, customConfig);
   };
 
   const handleSelectSample = (sampleUrl: string) => {
@@ -78,36 +86,49 @@ export const ScanInput: React.FC<ScanInputProps> = ({
       </div>
 
       {/* Main Search Box */}
-      <form onSubmit={handleSubmit} className="relative space-y-2">
+      <form onSubmit={handleSubmit} className="relative space-y-2" action="#">
+        {/* Hidden submit trigger to guarantee standard implicit form submission in all browsers */}
+        <button type="submit" tabIndex={-1} aria-hidden="true" className="hidden" />
+
         <div className="flex flex-col sm:flex-row items-stretch gap-2 bg-slate-900/90 p-2 rounded-xl border border-slate-800 shadow-xl focus-within:border-cyan-500/60 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all">
           <div className="flex items-center flex-1 px-3 py-2 text-slate-400">
             <Globe className="w-5 h-5 text-slate-500 mr-3 shrink-0" />
             <input
               ref={inputRef}
               type="text"
+              name="targetUrl"
+              id="targetUrlInput"
+              autoComplete="url"
+              spellCheck={false}
+              autoCapitalize="none"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
               placeholder={t.inputPlaceholder}
               disabled={isScanning}
               className="w-full bg-transparent text-white placeholder-slate-500 text-sm sm:text-base focus:outline-none font-mono"
             />
+            {url && !isScanning && (
+              <button
+                type="button"
+                onClick={() => setUrl('')}
+                className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors mr-1 cursor-pointer"
+                title="Clear input"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
             <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-400 select-none mr-1 shrink-0">
               / or ⌘K
             </span>
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-2 px-2 sm:px-0 flex-wrap">
-            <button
-              type="button"
-              onClick={onOpenBulkScan}
-              disabled={isScanning}
-              className="px-3.5 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 hover:border-cyan-500/40 text-xs sm:text-sm font-semibold font-mono transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto"
-              title="Audit multiple URLs from a list or file"
-            >
-              <Layers className="w-4 h-4 text-cyan-400" />
-              <span>Bulk Scan</span>
-            </button>
-
             <button
               type="submit"
               disabled={!url.trim() || isScanning}
@@ -124,6 +145,17 @@ export const ScanInput: React.FC<ScanInputProps> = ({
                   <span>{t.scanButton}</span>
                 </>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenBulkScan}
+              disabled={isScanning}
+              className="px-3.5 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 hover:border-cyan-500/40 text-xs sm:text-sm font-semibold font-mono transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto"
+              title="Audit multiple URLs from a list or file"
+            >
+              <Layers className="w-4 h-4 text-cyan-400" />
+              <span>Bulk Scan</span>
             </button>
           </div>
         </div>

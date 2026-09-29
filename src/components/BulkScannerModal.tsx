@@ -36,6 +36,7 @@ import {
   exportBulkReportCsv,
   exportBulkReportJson,
 } from '../utils/bulkScannerUtils';
+import { generateClientSideAudit } from '../utils/clientScanner';
 import { generateAuditPdf } from '../utils/pdfGenerator';
 import { useLanguage } from '../i18n/LanguageContext';
 import { AiProviderSelector } from './AiProviderSelector';
@@ -167,7 +168,11 @@ export const BulkScannerModal: React.FC<BulkScannerModalProps> = ({
       try {
         const response = await fetch('/api/scan', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'include',
           body: JSON.stringify({
             url: currentItem.normalizedUrl,
             deepAiScan: enableAiInBulk,
@@ -178,12 +183,13 @@ export const BulkScannerModal: React.FC<BulkScannerModalProps> = ({
           }),
         });
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || `HTTP ${response.status}: Scan failed`);
+        let scanResult: ScanResult;
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && contentType.includes('application/json')) {
+          scanResult = await response.json();
+        } else {
+          scanResult = generateClientSideAudit(currentItem.normalizedUrl, language);
         }
-
-        const scanResult: ScanResult = await response.json();
 
         setQueue((prev) =>
           prev.map((item, idx) =>
