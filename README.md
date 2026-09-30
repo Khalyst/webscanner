@@ -16,6 +16,8 @@
 
 - [Overview & Architecture](#-overview--architecture)
 - [Key Features](#-key-features)
+- [Administrator Incident Alerting & Real-Time SMTP Validator](#-administrator-incident-alerting--real-time-smtp-validator)
+- [Software Updates & CVE Patch Auditor](#-software-updates--cve-patch-auditor)
 - [Passive Subdomain & Certificate Transparency OSINT (crt.sh)](#-passive-subdomain--certificate-transparency-osint-crtsh)
 - [Model Context Protocol (MCP) Hub & Interactive Tool Runner](#-model-context-protocol-mcp-hub--interactive-tool-runner)
 - [Quick Start with Docker & Docker Compose](#-quick-start-with-docker--docker-compose-recommended)
@@ -78,13 +80,16 @@
 ## 🌟 Key Features
 
 - **Recent Audits History & Instant Recall**: Automatically preserves prior vulnerability audits in browser local storage with zero server footprint. Features a Dedicated History Drawer with search filters, quick target chips underneath the search input, average score telemetry, 1-click re-scan, and batch export to JSON/CSV.
+- **Administrator Incident Alerting & Multi-Channel Dispatcher**: Real-time incident reporting to Slack, Discord, custom SIEM/PagerDuty webhooks, and direct RFC-compliant email advisories with executive severity matrix.
+- **Real-Time SMTP Connection & Credential Validator**: Built-in mail server testing utility that verifies TCP sockets, TLS handshakes (`STARTTLS`/`SSL`), and SMTP credentials before allowing security emails to be sent, with round-trip latency metering and diagnostic troubleshooting advice.
+- **Software Updates & CVE Patch Auditor**: Automatic fingerprinting of web servers, runtimes, and CMS engines with End-of-Life (EOL) warnings, mapped CVE advisories, and downloadable one-click bash remediation scripts (`patch-<hostname>.sh`).
 - **Interactive Fix Simulator & Score Projection**: Interactive checklist allowing security engineers and developers to simulate remediating findings in real-time. Dynamically models projected CVSS score recovery (e.g. from 58 D to 84 B) and outputs a ready-to-paste markdown remediation action plan for Jira or GitHub issues.
 - **One-Click Shareable Summary Card**: Generates and copies clean, formatted Markdown briefings for Slack, Discord, Microsoft Teams, and bug trackers with target metadata, grades, SSL status, and top remediation priorities.
 - **Power-User Keyboard Shortcuts**: Instant keyboard navigation with `/` or `Cmd/Ctrl + K` to focus scan target, `1` through `7` for direct tab switching, `H` for audit history, and `Esc` to dismiss modals.
 - **Passive Subdomain & Certificate Transparency OSINT (`crt.sh`)**: Queries global SSL/TLS Certificate Transparency logs to discover unlisted subdomains, hidden APIs, and staging portals without sending direct packets to the target. Features automatic classification into Dev/Staging, Admin/Portal, API/Gateway, Infrastructure, and Storage buckets, live DNS resolving verification, and 1-click pivot scanning.
 - **Model Context Protocol (MCP) Hub & Tool Runner**: Full implementation of the MCP v1.0 standard with a built-in server registry and live JSON-RPC execution engine. Comes pre-integrated with 4 built-in OSINT tool servers (`crt.sh`, `Wayback Machine CDX Archive Crawler`, `DNS Intelligence`, and `IP/ASN Threat Intelligence`) plus support for connecting custom local/remote MCP servers (HTTP/SSE) with interactive schema parameter inputs and latency tracking.
 - **Bulk URL Queue & Multi-Target Audits**: Queue dozens or hundreds of URLs via comma-separated list, line-by-line text, or file upload (`.txt`, `.csv`, `.json`). Features sequential rate-limiting protection, pause/resume controls, error retrying, average score computation, individual report drilldown, and batch export to both CSV and JSON formats.
-- **HTTP Security Headers Matrix**: Evaluates OWASP-recommended headers (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `COOP`, `COEP`, `CORP`) with PASS/WARN/FAIL status and server configuration snippets (`Nginx`, `Apache`, `Express`, `Cloudflare`).
+- **HTTP Security Headers Matrix**: Evaluates OWASP-recommended headers (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `COOP`, `COEP`, `CORP`) with PASS/WARN/FAIL status and server configuration snippets (`Nginx`, `Apache`, `Express`, `Cloudflare`).
 - **TLS / SSL Cryptographic Audit**: Live socket probing of SSL/TLS certificates, expiry days countdown, cipher strength, protocol version (`TLSv1.3`, `TLSv1.2`), and Subject Alternative Names (SANs).
 - **DNS & Email Anti-Spoofing Audit**: Complete resolution of A, AAAA, MX, TXT, NS, CNAME, and SOA records; automated analysis of SPF qualifiers (`-all`, `~all`, `+all`) and DMARC enforcement policies (`reject`, `quarantine`, `none`).
 - **Server & Tech Stack Fingerprinting**: Discovers underlying web servers (Nginx, Apache, Caddy), backend languages, CMS systems (WordPress, Drupal, Shopify), and flags version disclosure vulnerabilities with mapped CVE advisories.
@@ -95,6 +100,48 @@
 - **Downloadable Mobile App (PWA & Offline)**: Install WEBSCANNER on your smartphone (Android & iPhone) with 1-click install, native app launcher icon, standalone full-screen window, and offline caching powered by Service Workers.
 - **Default Deterministic Engine & BYOK AI (Zero Host Account Usage)**: Scans default to the 100% free, private **Native Deterministic Rule Engine** (zero API keys, zero cloud costs). Users and mobile app users bring their own API keys (BYOK) if they want to run Google Gemini, OpenAI, Anthropic Claude, or Mistral. The host's personal Gemini account is never used or charged.
 - **Exportable PDF Audit Reports**: Generates professional vector-crisp multi-page PDF audit reports with 1-click download.
+
+---
+
+## 🚨 Administrator Incident Alerting & Real-Time SMTP Validator
+
+WEBSCANNER features an enterprise-grade **Incident Notification & Security Advisory Dispatcher** with multi-channel alerting and real-time mail server connection verification.
+
+```
+[ Target Scan Complete ]
+         │
+         ▼
+[ Admin Alert Modal ] ──────► Real-Time SMTP Validator (TCP / TLS / AUTH / Latency ms)
+         │
+         ├──► 📨 Direct SMTP Relay (Gmail, SendGrid, Office 365, Mailgun, Corporate SMTP)
+         ├──► ✉️ Native Mail Client (1-Click mailto: with full markdown advisory pre-filled)
+         ├──► 💬 Slack Webhook (Rich Incident Block Kit with action items)
+         ├──► 🎮 Discord Webhook (Embedded color-coded incident cards)
+         └──► 📡 Custom Webhook / SIEM (PagerDuty, Opsgenie, Splunk JSON payload)
+```
+
+### Highlights & Capabilities
+- **Real-Time SMTP Socket & Credential Testing**:
+  - Live pre-flight socket verification to target mail server port (`587` STARTTLS, `465` SSL direct, `25`).
+  - Tests authentication credentials (`AUTH LOGIN` / `AUTH PLAIN`) using `nodemailer` transport verification before allowing security emails to be dispatched.
+  - Returns round-trip connection latency in milliseconds (e.g. `⚡ 84ms latency`).
+  - Actionable error diagnostics: Categorizes specific failure codes (`EAUTH`, `ETIMEDOUT`, `ECONNREFUSED`, `ENOTFOUND`) with prescriptive troubleshooting advice.
+- **Provider Presets**: Instant 1-click configuration for **Google Workspace / Gmail** (`smtp.gmail.com`), **SendGrid** (`smtp.sendgrid.net`), **Microsoft Office 365** (`smtp.office365.com`), and **Mailgun** (`smtp.mailgun.org`).
+- **Dual Email Architecture**:
+  - **Option A (Direct Server Relay)**: Transmits formatted responsive HTML & plain-text incident advisories via configured SMTP, Resend, or SendGrid.
+  - **Option B (Native Mail Client Fallback)**: One-click `mailto:` launch opening your native desktop or mobile email app pre-populated with the complete advisory text, findings count, and remediation instructions.
+- **Policy Enforcement**: Gated transmission ensures untested credentials cannot trigger silent delivery errors, keeping alert pipelines reliable.
+
+---
+
+## 📦 Software Updates & CVE Patch Auditor
+
+WEBSCANNER audits identified web server runtimes, reverse proxies, and Content Management Systems against current CVE security vulnerability catalogs and vendor patch baselines.
+
+- **Component Version Identification**: Fingerprints versions for Nginx, Apache HTTP Server, Caddy, Microsoft IIS, PHP, Node.js, Python, WordPress, Drupal, Joomla, and more.
+- **End-of-Life (EOL) & CVE Mapping**: Flags obsolete versions no longer receiving upstream security patches and maps detected software to active High and Critical CVE advisories.
+- **Automated Remediation Shell Scripts**: Generates executable, copyable bash upgrade scripts tailored to Ubuntu/Debian (`apt-get`), RHEL/CentOS/Fedora (`dnf`), Docker (`docker compose pull`), and application package managers.
+- **1-Click Download**: Export system patch scripts directly as `patch-<hostname>.sh`.
 
 ---
 
@@ -538,23 +585,92 @@ Content-Type: application/json
 }
 ```
 
+### 5. Real-Time SMTP Connection & Credential Testing
+```http
+POST /api/alerts/smtp-test
+Content-Type: application/json
+```
+
+#### Request Payload:
+```json
+{
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "user": "security-admin@yourcompany.com",
+  "pass": "app-specific-password",
+  "secure": false,
+  "from": "security-alerts@yourcompany.com"
+}
+```
+
+#### Response:
+```json
+{
+  "success": true,
+  "latencyMs": 84,
+  "message": "SMTP connection established and authenticated successfully with smtp.gmail.com:587 (84ms).",
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "secure": false,
+  "user": "security-admin@yourcompany.com"
+}
+```
+
+### 6. Administrator Incident Alert Dispatcher
+```http
+POST /api/alerts/dispatch
+Content-Type: application/json
+```
+
+#### Request Payload:
+```json
+{
+  "channel": "email",
+  "adminEmail": "security-lead@target.com",
+  "hostname": "target.com",
+  "targetUrl": "https://target.com",
+  "alertSeverity": "HIGH",
+  "overallScore": 64,
+  "securityGrade": "C",
+  "criticalFlawsCount": 1,
+  "highFlawsCount": 3,
+  "outdatedUpdatesCount": 2,
+  "vulnerabilities": [...],
+  "missingUpdates": [...]
+}
+```
+
+#### Response:
+```json
+{
+  "success": true,
+  "channel": "email",
+  "deliveryStatus": "delivered",
+  "message": "Security advisory email dispatched via verified SMTP host (smtp.gmail.com:587) to security-lead@target.com",
+  "httpCode": 200,
+  "recipient": "security-lead@target.com",
+  "dispatchedAt": "2026-09-30T15:10:00.000Z"
+}
+```
+
 ---
 
 ## 📁 Repository Structure
 
 ```
 ├── .dockerignore              # Excluded files for clean Docker builds
-├── .env.example               # Template environment configuration
+├── .env.example               # Template environment configuration (AI keys & SMTP relay)
 ├── Dockerfile                 # Production multi-stage Alpine Docker build
 ├── docker-compose.yml         # Container orchestration specification
 ├── index.html                 # Entry point with SEO metadata & typography
 ├── metadata.json              # Studio capabilities configuration
 ├── package.json               # Dependencies and runner scripts
 ├── README.md                  # Comprehensive documentation and setup guide
-├── server.ts                  # Express full-stack backend with OSINT probes
+├── server.ts                  # Express full-stack backend with OSINT probes & alert APIs
 ├── server/
 │   ├── aiRouter.ts            # AI-Agnostic Engine (Gemini, OpenAI, Claude, Ollama, Offline)
 │   ├── crtShService.ts        # Passive Certificate Transparency (crt.sh) subdomains engine
+│   ├── emailService.ts        # Real-time SMTP testing, advisory HTML/text, & multi-relay dispatch
 │   └── mcpService.ts          # Model Context Protocol (MCP) server registry & JSON-RPC dispatcher
 ├── tsconfig.json              # TypeScript compilation configuration
 ├── vite.config.ts             # Vite bundling and Tailwind CSS v4 configuration
@@ -563,27 +679,30 @@ Content-Type: application/json
     ├── index.css              # Tailwind CSS styling and print media rules
     ├── main.tsx               # React 19 application mount
     ├── types/
-    │   └── scanner.ts         # TypeScript interfaces for audit results
+    │   └── scanner.ts         # TypeScript interfaces for audit results, SMTP & alert payloads
     ├── i18n/
     │   ├── translations.ts    # 8-language localization dictionaries
     │   └── LanguageContext.tsx # Dynamic language provider and RTL handler
     ├── utils/
     │   ├── pdfGenerator.ts    # Multi-page vector PDF audit report builder
-    │   └── sampleScan.ts      # Curated preloaded security audit demo
+    │   ├── sampleScan.ts      # Curated preloaded security audit demo
+    │   └── softwareUpdates.ts # Software version profiling, CVE mapping & bash patch script generator
     └── components/
         ├── Header.tsx         # 3-zone header with MCP Hub and language selector
         ├── ScanInput.tsx      # Target input, sample buttons, and live step progress
         ├── ScanOverview.tsx   # Posture score gauge, grade badge, and metric cards
         ├── FlawsList.tsx      # Severity filters and copyable remediation code
+        ├── AdminAlertModal.tsx # Incident alert modal with Real-Time SMTP Validator & Dispatcher
         ├── DeployModal.tsx    # Interactive Docker & GitHub deployment guide
         ├── McpHubModal.tsx    # Interactive Model Context Protocol (MCP) Hub dialog
         ├── AiProviderSelector.tsx # Dynamic AI model and provider switcher
         └── tabs/
-            ├── HeadersAudit.tsx      # HTTP security headers matrix
-            ├── SslDnsAudit.tsx        # SSL/TLS & SPF/DMARC anti-spoofing audit
-            ├── TechPortsAudit.tsx     # Tech stack, open ports & robots.txt
-            ├── SubdomainsAudit.tsx    # Certificate Transparency & Subdomains OSINT tab
-            └── AiExecutiveReport.tsx  # CISO Executive threat briefing
+            ├── HeadersAudit.tsx        # HTTP security headers matrix
+            ├── SslDnsAudit.tsx          # SSL/TLS & SPF/DMARC anti-spoofing audit
+            ├── SoftwareUpdatesAudit.tsx # Software versions, EOL checks & CVE patch scripts
+            ├── TechPortsAudit.tsx       # Tech stack, open ports & robots.txt
+            ├── SubdomainsAudit.tsx      # Certificate Transparency & Subdomains OSINT tab
+            └── AiExecutiveReport.tsx    # CISO Executive threat briefing
 ```
 
 ---
@@ -604,8 +723,15 @@ Content-Type: application/json
 | `MISTRAL_MODEL` | Mistral AI | `mistral-large-latest` | Default model identifier for Mistral |
 | `OLLAMA_BASE_URL` | Ollama (Local) | `http://localhost:11434` | Ollama service endpoint (or `http://host.docker.internal:11434` in Docker) |
 | `OLLAMA_MODEL` | Ollama (Local) | `llama3` | Default local model (e.g., `llama3`, `mistral`, `deepseek-r1`) |
+| `SMTP_HOST` | Email / Alerts (Optional) | `""` | Outbound mail server hostname (e.g. `smtp.gmail.com`, `mail.yourserver.com`) |
+| `SMTP_PORT` | Email / Alerts (Optional) | `587` | Outbound mail server port (`587` STARTTLS or `465` SSL direct) |
+| `SMTP_USER` | Email / Alerts (Optional) | `""` | SMTP authentication username / account email |
+| `SMTP_PASS` | Email / Alerts (Optional) | `""` | SMTP authentication password or 16-character App Password |
+| `SMTP_FROM` | Email / Alerts (Optional) | `security-alerts@webscanner.local` | Default RFC-compliant From address for security advisories |
+| `RESEND_API_KEY` | Email / Alerts (Optional) | `""` | Optional Resend API key for direct transactional email delivery |
+| `SENDGRID_API_KEY` | Email / Alerts (Optional) | `""` | Optional SendGrid API key for direct transactional email delivery |
 
-*Note: Without any API keys configured, WEBSCANNER automatically runs in **Native Deterministic Mode** with 100% offline, free analysis.*
+*Note: Without any API keys configured, WEBSCANNER automatically runs in **Native Deterministic Mode** with 100% offline, free analysis. SMTP connection testing and credentials can also be tested and configured live directly within the Admin Alert UI.*
 
 ---
 
