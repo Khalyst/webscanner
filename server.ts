@@ -35,6 +35,7 @@ import type {
   AdminAlertPayload,
 } from './src/types/scanner.ts';
 import { auditSoftwareUpdates } from './src/utils/softwareUpdates.ts';
+import { dispatchEmailAdvisory, isServerEmailConfigured } from './server/emailService.ts';
 
 dotenv.config();
 
@@ -1456,6 +1457,11 @@ app.post('/api/scan', async (req: Request, res: Response) => {
   }
 });
 
+// Check email dispatch backend status
+app.get('/api/alerts/email-status', (_req: Request, res: Response) => {
+  res.json(isServerEmailConfigured());
+});
+
 // Administrator Security Alert Dispatcher (Webhooks & Email Notifications)
 app.post('/api/alerts/dispatch', async (req: Request, res: Response) => {
   try {
@@ -1470,7 +1476,17 @@ app.post('/api/alerts/dispatch', async (req: Request, res: Response) => {
     let httpCode = 200;
     let message = 'Alert prepared successfully';
 
-    if (payload.webhookUrl && payload.webhookUrl.startsWith('http')) {
+    if (channel === 'email') {
+      const emailRecipient = payload.adminEmail || `admin@${payload.hostname}`;
+      const emailResult = await dispatchEmailAdvisory(payload, emailRecipient);
+      deliveryStatus = emailResult.success
+        ? emailResult.mode === 'mailto_fallback'
+          ? 'email_prepared'
+          : 'delivered'
+        : 'failed';
+      message = emailResult.message;
+      httpCode = emailResult.success ? 200 : 500;
+    } else if (payload.webhookUrl && payload.webhookUrl.startsWith('http')) {
       try {
         if (channel === 'slack') {
           const slackBody = {
@@ -1580,10 +1596,8 @@ app.post('/api/alerts/dispatch', async (req: Request, res: Response) => {
         message = `Failed to contact webhook endpoint: ${postErr?.message || 'Connection error'}`;
       }
     } else {
-      deliveryStatus = channel === 'email' ? 'email_prepared' : 'simulated';
-      message = channel === 'email'
-        ? `Security incident advisory generated for administrator: ${payload.adminEmail || 'admin@' + payload.hostname}`
-        : 'Webhook payload formatted and ready for dispatch.';
+      deliveryStatus = 'simulated';
+      message = 'Webhook payload formatted and ready for dispatch.';
     }
 
     res.json({
