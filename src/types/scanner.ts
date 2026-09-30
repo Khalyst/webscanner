@@ -276,6 +276,29 @@ export interface SoftwareUpdateAudit {
   patchScript: string;
 }
 
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass?: string;
+  secure?: boolean;
+  from?: string;
+}
+
+export interface SmtpValidationState {
+  status: 'idle' | 'testing' | 'valid' | 'invalid';
+  testedAt?: string;
+  latencyMs?: number;
+  message?: string;
+  diagnostic?: {
+    code?: string;
+    details?: string;
+    remediationTip?: string;
+  };
+  testedHost?: string;
+  testedUser?: string;
+}
+
 export interface AdminAlertPayload {
   targetUrl: string;
   hostname: string;
@@ -288,6 +311,8 @@ export interface AdminAlertPayload {
   outdatedUpdatesCount: number;
   overallScore: number;
   securityGrade: string;
+  smtpConfig?: SmtpConfig;
+  smtpVerified?: boolean;
   vulnerabilities: Array<{
     title: string;
     severity: string;

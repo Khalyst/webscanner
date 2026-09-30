@@ -16,8 +16,17 @@ import {
   BellRing,
   Code,
   Check,
+  Server,
+  Zap,
+  Eye,
+  EyeOff,
+  Lock,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+  Info,
 } from 'lucide-react';
-import type { ScanResult, AdminAlertPayload } from '../types/scanner';
+import type { ScanResult, AdminAlertPayload, SmtpValidationState } from '../types/scanner';
 import { buildAdminAlertPayload } from '../utils/softwareUpdates';
 
 interface AdminAlertModalProps {
@@ -54,6 +63,23 @@ export const AdminAlertModal: React.FC<AdminAlertModalProps> = ({
   const [customWebhook, setCustomWebhook] = useState(() => {
     return localStorage.getItem('webscanner_custom_webhook') || '';
   });
+
+  // SMTP Configuration State
+  const [smtpHost, setSmtpHost] = useState(() => localStorage.getItem('webscanner_smtp_host') || '');
+  const [smtpPort, setSmtpPort] = useState(() => localStorage.getItem('webscanner_smtp_port') || '587');
+  const [smtpUser, setSmtpUser] = useState(() => localStorage.getItem('webscanner_smtp_user') || '');
+  const [smtpPass, setSmtpPass] = useState(() => localStorage.getItem('webscanner_smtp_pass') || '');
+  const [smtpSecure, setSmtpSecure] = useState(() => localStorage.getItem('webscanner_smtp_secure') === 'true');
+  const [smtpFrom, setSmtpFrom] = useState(() => localStorage.getItem('webscanner_smtp_from') || 'security-alerts@webscanner.local');
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [isSmtpConfigOpen, setIsSmtpConfigOpen] = useState(true);
+
+  // Real-Time SMTP Validation State
+  const [smtpValidation, setSmtpValidation] = useState<SmtpValidationState>({
+    status: 'idle',
+  });
+  const [isTestingSmtp, setIsTestingSmtp] = useState(false);
+  const [validationWarning, setValidationWarning] = useState<string | null>(null);
 
   const [emailServerStatus, setEmailServerStatus] = useState<{
     configured: boolean;
@@ -95,6 +121,138 @@ export const AdminAlertModal: React.FC<AdminAlertModalProps> = ({
     if (customWebhook) localStorage.setItem('webscanner_custom_webhook', customWebhook);
   }, [customWebhook]);
 
+  // Persist SMTP settings
+  useEffect(() => {
+    localStorage.setItem('webscanner_smtp_host', smtpHost);
+  }, [smtpHost]);
+
+  useEffect(() => {
+    localStorage.setItem('webscanner_smtp_port', smtpPort);
+  }, [smtpPort]);
+
+  useEffect(() => {
+    localStorage.setItem('webscanner_smtp_user', smtpUser);
+  }, [smtpUser]);
+
+  useEffect(() => {
+    localStorage.setItem('webscanner_smtp_pass', smtpPass);
+  }, [smtpPass]);
+
+  useEffect(() => {
+    localStorage.setItem('webscanner_smtp_secure', String(smtpSecure));
+  }, [smtpSecure]);
+
+  useEffect(() => {
+    localStorage.setItem('webscanner_smtp_from', smtpFrom);
+  }, [smtpFrom]);
+
+  // If SMTP credentials change, reset validation state
+  const handleSmtpFieldChange = (setter: React.Dispatch<React.SetStateAction<any>>, value: any) => {
+    setter(value);
+    setValidationWarning(null);
+    if (smtpValidation.status === 'valid') {
+      setSmtpValidation({
+        status: 'idle',
+        message: 'Credentials modified. Test connection to re-validate.',
+      });
+    }
+  };
+
+  const handleApplyPreset = (preset: 'gmail' | 'sendgrid' | 'office365' | 'mailgun') => {
+    setValidationWarning(null);
+    if (preset === 'gmail') {
+      setSmtpHost('smtp.gmail.com');
+      setSmtpPort('587');
+      setSmtpSecure(false);
+      setSmtpValidation({
+        status: 'idle',
+        message: 'Gmail preset loaded. Enter your Gmail address & 16-character Google App Password, then click "Test SMTP Connection".',
+      });
+    } else if (preset === 'sendgrid') {
+      setSmtpHost('smtp.sendgrid.net');
+      setSmtpPort('587');
+      setSmtpUser('apikey');
+      setSmtpSecure(false);
+      setSmtpValidation({
+        status: 'idle',
+        message: 'SendGrid preset loaded. Enter your SendGrid API key as password, then click "Test SMTP Connection".',
+      });
+    } else if (preset === 'office365') {
+      setSmtpHost('smtp.office365.com');
+      setSmtpPort('587');
+      setSmtpSecure(false);
+      setSmtpValidation({
+        status: 'idle',
+        message: 'Office 365 preset loaded. Enter your Microsoft 365 email & App Password, then click "Test SMTP Connection".',
+      });
+    } else if (preset === 'mailgun') {
+      setSmtpHost('smtp.mailgun.org');
+      setSmtpPort('587');
+      setSmtpSecure(false);
+      setSmtpValidation({
+        status: 'idle',
+        message: 'Mailgun preset loaded. Enter your Mailgun SMTP credentials, then click "Test SMTP Connection".',
+      });
+    }
+  };
+
+  const handleTestSmtpConnection = async () => {
+    setValidationWarning(null);
+    setIsTestingSmtp(true);
+    setSmtpValidation({ status: 'testing' });
+
+    try {
+      const portNum = parseInt(smtpPort, 10) || 587;
+      const res = await fetch('/api/alerts/smtp-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: smtpHost,
+          port: portNum,
+          user: smtpUser,
+          pass: smtpPass,
+          secure: smtpSecure,
+          from: smtpFrom,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSmtpValidation({
+          status: 'valid',
+          testedAt: new Date().toLocaleTimeString(),
+          latencyMs: data.latencyMs,
+          message: data.message,
+          testedHost: data.host,
+          testedUser: data.user,
+        });
+      } else {
+        setSmtpValidation({
+          status: 'invalid',
+          testedAt: new Date().toLocaleTimeString(),
+          latencyMs: data.latencyMs || 0,
+          message: data.message || 'SMTP connection verification failed',
+          diagnostic: data.diagnostic,
+          testedHost: data.host || smtpHost,
+          testedUser: data.user || smtpUser,
+        });
+      }
+    } catch (err: any) {
+      setSmtpValidation({
+        status: 'invalid',
+        testedAt: new Date().toLocaleTimeString(),
+        message: 'Network request error while testing SMTP endpoint: ' + (err?.message || 'Check local server connectivity'),
+        diagnostic: {
+          code: 'CLIENT_FETCH_ERROR',
+          details: err?.message,
+          remediationTip: 'Ensure your app dev server is running and accessible.',
+        },
+      });
+    } finally {
+      setIsTestingSmtp(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const activeWebhookUrl =
@@ -134,10 +292,41 @@ export const AdminAlertModal: React.FC<AdminAlertModalProps> = ({
   };
 
   const handleDispatchAlert = async () => {
+    setValidationWarning(null);
+
+    // Policy Check: Enforce real-time SMTP validation before dispatching security emails
+    if (channel === 'email') {
+      const isSmtpVerified = smtpValidation.status === 'valid';
+      const isServerEnvConfigured = emailServerStatus?.configured;
+
+      if (!isSmtpVerified && !isServerEnvConfigured) {
+        setValidationWarning(
+          'Real-time SMTP validation required: Please run "Test SMTP Connection" and confirm successful authentication before sending security advisory emails (or use "Open in Mail Client").'
+        );
+        setIsSmtpConfigOpen(true);
+        return;
+      }
+    }
+
     setIsSending(true);
     setSendResult(null);
 
     try {
+      const finalPayload: AdminAlertPayload = {
+        ...alertPayload,
+        smtpConfig: smtpHost.trim()
+          ? {
+              host: smtpHost.trim(),
+              port: parseInt(smtpPort, 10) || 587,
+              user: smtpUser.trim(),
+              pass: smtpPass,
+              secure: smtpSecure,
+              from: smtpFrom.trim(),
+            }
+          : undefined,
+        smtpVerified: smtpValidation.status === 'valid',
+      };
+
       const response = await fetch('/api/alerts/dispatch', {
         method: 'POST',
         headers: {
@@ -145,7 +334,7 @@ export const AdminAlertModal: React.FC<AdminAlertModalProps> = ({
           Accept: 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(alertPayload),
+        body: JSON.stringify(finalPayload),
       });
 
       const resData = await response.json();
@@ -391,7 +580,8 @@ Report generated by WEBSCANNER Autonomous Audit Engine.`;
                 )}
 
                 {channel === 'email' && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    {/* Recipient Input */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
                         <label className="block text-xs font-mono text-slate-300 font-semibold">
@@ -402,12 +592,16 @@ Report generated by WEBSCANNER Autonomous Audit Engine.`;
                             className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
                               emailServerStatus.configured
                                 ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                                : smtpValidation.status === 'valid'
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
                                 : 'bg-slate-800 text-cyan-400 border-slate-700'
                             }`}
                           >
                             {emailServerStatus.configured
-                              ? `● Direct SMTP/Relay (${emailServerStatus.provider.toUpperCase()}) Active`
-                              : '● Native Mail Client (mailto:) Operational'}
+                              ? `● Server Relay (${emailServerStatus.provider.toUpperCase()}) Active`
+                              : smtpValidation.status === 'valid'
+                              ? `● Custom SMTP Verified (${smtpValidation.latencyMs}ms)`
+                              : '● Verification Required for Direct Send'}
                           </span>
                         )}
                       </div>
@@ -423,17 +617,282 @@ Report generated by WEBSCANNER Autonomous Audit Engine.`;
                       </p>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-1.5 font-mono">
-                      <div className="flex items-center justify-between text-cyan-400 font-bold">
-                        <span>Email Dispatch Status: OPERATIONAL</span>
-                        <span className="text-[10px] uppercase bg-cyan-950 border border-cyan-800 text-cyan-300 px-1.5 py-0.5 rounded">Ready</span>
+                    {/* REAL-TIME SMTP CONNECTION TESTING UTILITY */}
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 overflow-hidden shadow-inner">
+                      {/* Utility Header */}
+                      <div className="p-3.5 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <Server className="w-4 h-4 text-cyan-400 shrink-0" />
+                          <div>
+                            <span className="text-xs font-bold text-white font-mono flex items-center gap-1.5">
+                              Real-Time SMTP Connection & Credentials Tester
+                            </span>
+                            <p className="text-[10px] text-slate-400">
+                              Validates mail server TCP socket, TLS handshake, and AUTH credentials before dispatching.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Live Status Badge */}
+                          {smtpValidation.status === 'valid' ? (
+                            <span className="flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-600/80 shadow-sm animate-in fade-in">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Verified ({smtpValidation.latencyMs}ms)</span>
+                            </span>
+                          ) : smtpValidation.status === 'testing' ? (
+                            <span className="flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-1 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-700 shadow-sm">
+                              <RefreshCw className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                              <span>Verifying Handshake...</span>
+                            </span>
+                          ) : smtpValidation.status === 'invalid' ? (
+                            <span className="flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-1 rounded-full bg-rose-950/90 text-rose-300 border border-rose-700 shadow-sm">
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                              <span>Connection Failed</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[11px] font-mono px-2.5 py-1 rounded-full bg-slate-800 text-amber-300 border border-amber-600/50">
+                              <Info className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Verification Required</span>
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setIsSmtpConfigOpen(!isSmtpConfigOpen)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Toggle SMTP Configuration Drawer"
+                          >
+                            {isSmtpConfigOpen ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-slate-400">
-                        • <strong className="text-white">Option A: Native Mail Client:</strong> Click <span className="text-cyan-300 font-semibold">"Open in Mail Client"</span> to immediately launch your local email app (Gmail, Outlook, Apple Mail) pre-filled with the full security advisory report.
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        • <strong className="text-white">Option B: Server SMTP Relay:</strong> Click <span className="text-rose-400 font-semibold">"Send Email Alert"</span>. If <code className="text-cyan-300">SMTP_HOST</code> or <code className="text-cyan-300">RESEND_API_KEY</code> is set in environment, the server transmits it automatically.
-                      </p>
+
+                      {/* Utility Drawer Body */}
+                      {isSmtpConfigOpen && (
+                        <div className="p-4 space-y-4 bg-slate-950/40">
+                          {/* Quick Presets Bar */}
+                          <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-800/80">
+                            <span className="text-[11px] font-mono text-slate-400 font-semibold uppercase tracking-wider">
+                              Quick Presets:
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPreset('gmail')}
+                                className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 transition-colors cursor-pointer"
+                              >
+                                Gmail (587)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPreset('sendgrid')}
+                                className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 transition-colors cursor-pointer"
+                              >
+                                SendGrid (587)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPreset('office365')}
+                                className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 transition-colors cursor-pointer"
+                              >
+                                Office 365 (587)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPreset('mailgun')}
+                                className="px-2.5 py-1 rounded-md text-[10px] font-mono bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 transition-colors cursor-pointer"
+                              >
+                                Mailgun (587)
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Credentials Inputs Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-mono text-slate-400 mb-1 font-semibold">
+                                SMTP Server Hostname:
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="smtp.gmail.com or mail.yourdomain.com"
+                                value={smtpHost}
+                                onChange={(e) => handleSmtpFieldChange(setSmtpHost, e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-mono text-slate-400 mb-1 font-semibold">
+                                Port:
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  placeholder="587"
+                                  value={smtpPort}
+                                  onChange={(e) => handleSmtpFieldChange(setSmtpPort, e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 text-center"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSmtpFieldChange(setSmtpSecure, !smtpSecure)}
+                                  className={`px-2 py-1.5 rounded-lg text-[10px] font-mono font-bold whitespace-nowrap border cursor-pointer transition-colors ${
+                                    smtpSecure
+                                      ? 'bg-cyan-950 text-cyan-300 border-cyan-700'
+                                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                                  }`}
+                                  title={smtpSecure ? 'SSL Direct (Port 465)' : 'STARTTLS (Port 587/25)'}
+                                >
+                                  {smtpSecure ? 'SSL' : 'TLS'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-mono text-slate-400 mb-1 font-semibold">
+                                SMTP Username / Email:
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="alerts@yourdomain.com or apikey"
+                                value={smtpUser}
+                                onChange={(e) => handleSmtpFieldChange(setSmtpUser, e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[11px] font-mono text-slate-400 font-semibold">
+                                  Password / App Password:
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSmtpPass(!showSmtpPass)}
+                                  className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+                                >
+                                  {showSmtpPass ? (
+                                    <>
+                                      <EyeOff className="w-3 h-3" />
+                                      <span>Hide</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Eye className="w-3 h-3" />
+                                      <span>Show</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              <input
+                                type={showSmtpPass ? 'text' : 'password'}
+                                placeholder="••••••••••••••••"
+                                value={smtpPass}
+                                onChange={(e) => handleSmtpFieldChange(setSmtpPass, e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-mono text-slate-400 mb-1 font-semibold">
+                              Sender "From" Address:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="security-alerts@webscanner.local"
+                              value={smtpFrom}
+                              onChange={(e) => handleSmtpFieldChange(setSmtpFrom, e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                            />
+                          </div>
+
+                          {/* Real-Time Test Trigger & Latency Indicator */}
+                          <div className="pt-2 flex items-center justify-between flex-wrap gap-2.5">
+                            <button
+                              type="button"
+                              onClick={handleTestSmtpConnection}
+                              disabled={isTestingSmtp}
+                              className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-mono font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                            >
+                              {isTestingSmtp ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-200" />
+                                  <span>Testing SMTP Handshake & Auth...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                                  <span>Test SMTP Connection Now</span>
+                                </>
+                              )}
+                            </button>
+
+                            {smtpValidation.testedAt && (
+                              <span className="text-[10px] font-mono text-slate-500">
+                                Last tested: {smtpValidation.testedAt}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Real-Time Test Results Display */}
+                          {smtpValidation.status === 'valid' && (
+                            <div className="p-3 rounded-lg bg-emerald-950/50 border border-emerald-700/80 text-emerald-200 text-xs font-mono space-y-1 animate-in fade-in duration-150">
+                              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                <span>SMTP Connection Verified Successfully ({smtpValidation.latencyMs}ms)</span>
+                              </div>
+                              <p className="text-[11px] text-emerald-300/90 pl-6">
+                                {smtpValidation.message}
+                              </p>
+                              <div className="pl-6 pt-1 text-[10px] text-emerald-400/80 flex items-center gap-3">
+                                <span>Host: {smtpValidation.testedHost}</span>
+                                <span>User: {smtpValidation.testedUser}</span>
+                                <span>Status: Direct email unlocked</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {smtpValidation.status === 'invalid' && (
+                            <div className="p-3 rounded-lg bg-rose-950/50 border border-rose-700/80 text-rose-200 text-xs font-mono space-y-2 animate-in fade-in duration-150">
+                              <div className="flex items-center gap-2 text-rose-400 font-bold">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>SMTP Connection Verification Failed</span>
+                              </div>
+                              <p className="text-[11px] text-rose-300/90 pl-6">
+                                {smtpValidation.message}
+                              </p>
+                              {smtpValidation.diagnostic && (
+                                <div className="pl-6 pt-1 space-y-1 text-[11px] text-rose-300/80 bg-rose-950/80 p-2.5 rounded border border-rose-800">
+                                  {smtpValidation.diagnostic.code && (
+                                    <div className="font-semibold text-rose-300">
+                                      Error Code: <span className="font-mono text-amber-300">{smtpValidation.diagnostic.code}</span>
+                                    </div>
+                                  )}
+                                  {smtpValidation.diagnostic.details && (
+                                    <div className="text-[10px] text-slate-300">
+                                      Details: {smtpValidation.diagnostic.details}
+                                    </div>
+                                  )}
+                                  {smtpValidation.diagnostic.remediationTip && (
+                                    <div className="text-[10px] text-amber-300 pt-1 font-sans">
+                                      💡 <strong className="font-mono">Remediation Tip:</strong> {smtpValidation.diagnostic.remediationTip}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -504,6 +963,17 @@ Report generated by WEBSCANNER Autonomous Audit Engine.`;
                 </div>
               </div>
 
+              {/* Validation Warning Alert */}
+              {validationWarning && (
+                <div className="p-3.5 rounded-xl bg-amber-950/50 border border-amber-600 text-amber-200 text-xs font-mono flex items-start gap-2.5 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-amber-300 block mb-0.5">SMTP Validation Required</strong>
+                    <p className="text-[11px] text-amber-200/90 leading-relaxed">{validationWarning}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Result Notification */}
               {sendResult && (
                 <div
@@ -531,22 +1001,41 @@ Report generated by WEBSCANNER Autonomous Audit Engine.`;
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
                     onClick={handleDispatchAlert}
                     disabled={isSending}
-                    className="px-5 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-semibold text-xs font-mono transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                    className={`px-5 py-2.5 rounded-lg text-white font-semibold text-xs font-mono transition-all flex items-center gap-2 shadow-lg cursor-pointer ${
+                      channel === 'email' && smtpValidation.status === 'valid'
+                        ? 'bg-emerald-600 hover:bg-emerald-500'
+                        : 'bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-600'
+                    }`}
                   >
                     {isSending ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>{channel === 'email' ? 'Dispatching Email...' : 'Dispatching Alert...'}</span>
                       </>
+                    ) : channel === 'email' ? (
+                      <>
+                        {smtpValidation.status === 'valid' ? (
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                        <span>
+                          {smtpValidation.status === 'valid'
+                            ? 'Send Email Alert (SMTP Verified)'
+                            : emailServerStatus?.configured
+                            ? 'Send Email Alert (Server Relay)'
+                            : 'Send Email Alert (Test SMTP First)'}
+                        </span>
+                      </>
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>{channel === 'email' ? 'Send Email Alert' : 'Dispatch Alert Now'}</span>
+                        <span>Dispatch Alert Now</span>
                       </>
                     )}
                   </button>
@@ -556,7 +1045,8 @@ Report generated by WEBSCANNER Autonomous Audit Engine.`;
                       href={mailtoLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      title="Launch your local email client (Gmail/Outlook/Apple Mail) with formatted advisory pre-filled"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>Open in Mail Client</span>

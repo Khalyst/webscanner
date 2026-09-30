@@ -35,7 +35,11 @@ import type {
   AdminAlertPayload,
 } from './src/types/scanner.ts';
 import { auditSoftwareUpdates } from './src/utils/softwareUpdates.ts';
-import { dispatchEmailAdvisory, isServerEmailConfigured } from './server/emailService.ts';
+import {
+  dispatchEmailAdvisory,
+  isServerEmailConfigured,
+  testSmtpConnection,
+} from './server/emailService.ts';
 
 dotenv.config();
 
@@ -1462,6 +1466,32 @@ app.get('/api/alerts/email-status', (_req: Request, res: Response) => {
   res.json(isServerEmailConfigured());
 });
 
+// Real-time SMTP Connection & Credential Testing Utility
+app.post('/api/alerts/smtp-test', async (req: Request, res: Response) => {
+  try {
+    const testResult = await testSmtpConnection(req.body);
+    if (!testResult.success) {
+      res.status(400).json(testResult);
+      return;
+    }
+    res.json(testResult);
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      latencyMs: 0,
+      message: 'SMTP testing service error: ' + (err?.message || 'Internal error'),
+      host: req.body?.host || '',
+      port: req.body?.port || 587,
+      secure: req.body?.secure || false,
+      user: req.body?.user || '',
+      diagnostic: {
+        code: 'INTERNAL_TEST_ERROR',
+        details: err?.message,
+      },
+    });
+  }
+});
+
 // Administrator Security Alert Dispatcher (Webhooks & Email Notifications)
 app.post('/api/alerts/dispatch', async (req: Request, res: Response) => {
   try {
@@ -1478,7 +1508,7 @@ app.post('/api/alerts/dispatch', async (req: Request, res: Response) => {
 
     if (channel === 'email') {
       const emailRecipient = payload.adminEmail || `admin@${payload.hostname}`;
-      const emailResult = await dispatchEmailAdvisory(payload, emailRecipient);
+      const emailResult = await dispatchEmailAdvisory(payload, emailRecipient, payload.smtpConfig);
       deliveryStatus = emailResult.success
         ? emailResult.mode === 'mailto_fallback'
           ? 'email_prepared'
