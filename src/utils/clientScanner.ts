@@ -1,5 +1,5 @@
-import type { ScanResult, SecurityFlaw, HeaderCheckResult, SecurityGrade } from '../types/scanner';
-import { auditSoftwareUpdates } from './softwareUpdates';
+import type { ScanResult, SecurityFlaw, HeaderCheckResult, SecurityGrade } from '../types/scanner.ts';
+import { auditSoftwareUpdates } from './softwareUpdates.ts';
 
 export function generateClientSideAudit(inputUrl: string, lang = 'en'): ScanResult {
   let cleaned = inputUrl.trim();

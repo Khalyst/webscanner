@@ -1,5 +1,5 @@
-import type { ScanResult } from '../types/scanner';
-import { auditSoftwareUpdates } from './softwareUpdates';
+import type { ScanResult } from '../types/scanner.ts';
+import { auditSoftwareUpdates } from './softwareUpdates.ts';
 
 export const SAMPLE_SCAN_RESULT: ScanResult = {
   id: 'SCAN-SAMPLE-AUDIT',

@@ -51,12 +51,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { id: 'overview', label: t.navOverview },
-    { id: 'flaws', label: `${t.navFlaws} (${currentScan?.flaws.length ?? 0})` },
+    { id: 'flaws', label: `${t.navFlaws} (${currentScan?.flaws.length ?? 8})` },
     { id: 'headers', label: t.navHeaders },
     { id: 'ssl_dns', label: t.navSslDns },
     { id: 'tech_ports', label: t.navTechPorts },
-    { id: 'updates', label: `Updates (${currentScan?.softwareUpdates?.outdatedCount ?? 0})` },
-    { id: 'subdomains', label: `${t.navSubdomains} (${currentScan?.subdomains?.totalFound ?? 0})` },
+    { id: 'updates', label: `Updates (${currentScan?.softwareUpdates?.outdatedCount ?? 4})` },
+    { id: 'subdomains', label: `${t.navSubdomains} (${currentScan?.subdomains?.totalFound ?? 6})` },
     { id: 'ai_report', label: t.navExecutive },
   ];
 
@@ -81,32 +81,25 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Zone 2: Navigation links */}
-        {currentScan ? (
-          <nav className="hidden md:flex items-center gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-800/60">
-            {navItems.map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-800 text-cyan-300 shadow-sm border border-slate-700/50'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
-        ) : (
-          <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 font-mono">
-            <Terminal className="w-3.5 h-3.5 text-cyan-500" />
-            <span className="uppercase">{t.tagline}</span>
-          </div>
-        )}
+        {/* Zone 2: Navigation links - Always visible so user can explore all audit modules */}
+        <nav className="hidden md:flex items-center gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-800/60">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-slate-800 text-cyan-300 shadow-sm border border-slate-700/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
         {/* Zone 3: Primary Actions & International Language Selector */}
         <div className="flex items-center gap-2">
@@ -214,20 +207,20 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Docker</span>
           </button>
 
+          {onOpenAlertModal && (
+            <button
+              onClick={onOpenAlertModal}
+              disabled={isScanning}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-300 bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 rounded-lg transition-colors whitespace-nowrap cursor-pointer shadow-sm"
+              title="Dispatch security incident alert to administrator (Slack/Discord/Email/SIEM)"
+            >
+              <BellRing className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+              <span>Alert Admin</span>
+            </button>
+          )}
+
           {currentScan && (
             <>
-              {onOpenAlertModal && (
-                <button
-                  onClick={onOpenAlertModal}
-                  disabled={isScanning}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 rounded-lg transition-colors whitespace-nowrap cursor-pointer shadow-sm"
-                  title="Dispatch security incident alert to administrator (Slack/Discord/Email/SIEM)"
-                >
-                  <BellRing className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-                  <span className="hidden sm:inline">Alert Admin</span>
-                </button>
-              )}
-
               <button
                 onClick={onExportPdf}
                 disabled={isScanning}

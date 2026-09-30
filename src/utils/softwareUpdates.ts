@@ -5,7 +5,7 @@ import type {
   SoftwareUpdateStatus,
   ScanResult,
   AdminAlertPayload,
-} from '../types/scanner';
+} from '../types/scanner.ts';
 
 interface KnownSoftwareProfile {
   name: string;

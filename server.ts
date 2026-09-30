@@ -18,7 +18,7 @@ import {
   executeMcpTool,
   testMcpServer,
 } from './server/mcpService.ts';
-import {
+import type {
   ScanResult,
   SecurityFlaw,
   HeaderCheckResult,

@@ -36,6 +36,10 @@ import {
   Sparkles,
   ExternalLink,
   Layers,
+  PackageCheck,
+  BellRing,
+  Send,
+  Terminal,
 } from 'lucide-react';
 
 function ScannerContent() {
@@ -318,21 +322,29 @@ function ScannerContent() {
         onOpenBulkScan={() => setIsBulkModalOpen(true)}
         onOpenMcpHub={() => setIsMcpModalOpen(true)}
         onOpenHistory={() => setIsHistoryModalOpen(true)}
-        onOpenAlertModal={() => setIsAlertModalOpen(true)}
+        onOpenAlertModal={() => {
+          if (!scanResult) {
+            setScanResult(SAMPLE_SCAN_RESULT);
+          }
+          setIsAlertModalOpen(true);
+        }}
         historyCount={scanHistory.length}
         isScanning={isScanning}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => {
+          if (!scanResult) {
+            setScanResult(SAMPLE_SCAN_RESULT);
+          }
+          setActiveTab(tab);
+        }}
       />
 
       {/* Administrator Security Alert & Webhook Dispatcher Modal */}
-      {scanResult && (
-        <AdminAlertModal
-          isOpen={isAlertModalOpen}
-          onClose={() => setIsAlertModalOpen(false)}
-          scan={scanResult}
-        />
-      )}
+      <AdminAlertModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        scan={scanResult || SAMPLE_SCAN_RESULT}
+      />
 
       {/* Deploy & GitHub Instructions Modal */}
       <DeployModal
@@ -486,6 +498,65 @@ function ScannerContent() {
                 >
                   <span>{t.viewSampleAudit}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* FEATURE SHOWCASE: Software Updates & Admin Incident Alerts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-xl bg-gradient-to-br from-amber-950/30 via-slate-900/60 to-slate-900/90 border border-amber-800/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                    <PackageCheck className="w-4 h-4" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 border border-amber-700/80 text-amber-300">
+                    NEW • CVE INTELLIGENCE
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-white">Software Updates & CVE Patch Playbook</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                    Detects outdated components (Nginx, Apache, PHP, WordPress), maps published CVEs, and generates copyable/downloadable <code className="text-cyan-400 font-mono">.sh</code> remediation scripts.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScanResult(SAMPLE_SCAN_RESULT);
+                    setActiveTab('updates');
+                  }}
+                  className="w-full py-2 px-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-600/40 text-xs font-mono font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Explore Software Updates & Playbook Tab</span>
+                </button>
+              </div>
+
+              <div className="p-5 rounded-xl bg-gradient-to-br from-rose-950/30 via-slate-900/60 to-slate-900/90 border border-rose-800/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                    <BellRing className="w-4 h-4 animate-pulse" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 border border-rose-700/80 text-rose-300">
+                    NEW • INCIDENT RESPONSE
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-white">Administrator Incident Alert System</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                    Instant multi-channel webhook dispatching to Slack (Block Kit), Discord (color embeds), SIEM/JSON endpoints, and formatted RFC email advisories.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!scanResult) setScanResult(SAMPLE_SCAN_RESULT);
+                    setIsAlertModalOpen(true);
+                  }}
+                  className="w-full py-2 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-600/40 text-xs font-mono font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Open Administrator Alert Modal</span>
                 </button>
               </div>
             </div>
