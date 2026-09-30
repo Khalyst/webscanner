@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* MCP & OSINT Hub Trigger */}
           <button
             onClick={onOpenMcpHub}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-purple-300 bg-purple-950/70 hover:bg-purple-900/80 rounded-lg border border-purple-800/70 hover:border-purple-600 transition-colors cursor-pointer select-none"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-purple-300 bg-purple-950/70 hover:bg-purple-900/80 rounded-lg border border-purple-800/70 hover:border-purple-600 transition-colors cursor-pointer select-none"
             title="Model Context Protocol (MCP) & OSINT Tool Hub"
           >
             <Network className="w-3.5 h-3.5 text-purple-400" />
@@ -180,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Bulk Audit Queue Trigger */}
           <button
             onClick={onOpenBulkScan}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-cyan-300 bg-cyan-950/70 hover:bg-cyan-900/80 rounded-lg border border-cyan-800/80 hover:border-cyan-600 transition-colors cursor-pointer select-none"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-cyan-300 bg-cyan-950/70 hover:bg-cyan-900/80 rounded-lg border border-cyan-800/80 hover:border-cyan-600 transition-colors cursor-pointer select-none"
             title="Bulk URL Security Auditing (Queue Multiple Targets / Upload File)"
           >
             <Layers className="w-3.5 h-3.5 text-cyan-400" />
@@ -190,7 +190,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mobile App Download Button */}
           <button
             onClick={onOpenMobile}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-cyan-300 bg-cyan-950/70 hover:bg-cyan-900/70 rounded-lg border border-cyan-800/70 hover:border-cyan-600 transition-colors cursor-pointer select-none"
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-cyan-300 bg-cyan-950/70 hover:bg-cyan-900/70 rounded-lg border border-cyan-800/70 hover:border-cyan-600 transition-colors cursor-pointer select-none"
             title="Download Mobile App (Android / iOS / PWA)"
           >
             <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
@@ -200,7 +200,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Docker & GitHub Modal Trigger */}
           <button
             onClick={onOpenDeploy}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-slate-300 bg-slate-900/90 hover:bg-slate-800 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer select-none"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-slate-300 bg-slate-900/90 hover:bg-slate-800 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer select-none"
             title="Download via GitHub / Run with Docker"
           >
             <Container className="w-3.5 h-3.5 text-cyan-400" />
@@ -211,10 +211,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenAlertModal}
               disabled={isScanning}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-300 bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 rounded-lg transition-colors whitespace-nowrap cursor-pointer shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-rose-300 bg-rose-950/90 hover:bg-rose-900 border border-rose-700 hover:border-rose-600 rounded-lg transition-all whitespace-nowrap cursor-pointer shadow-md shrink-0 animate-pulse"
               title="Dispatch security incident alert to administrator (Slack/Discord/Email/SIEM)"
             >
-              <BellRing className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+              <BellRing className="w-3.5 h-3.5 text-rose-400 shrink-0" />
               <span>Alert Admin</span>
             </button>
           )}

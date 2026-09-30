@@ -423,6 +423,68 @@ function ScannerContent() {
           inputRef={scanInputRef}
         />
 
+        {/* Mobile Persistent Navigation & Quick Feature Strip */}
+        <div className="block md:hidden mt-3 mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+            {/* Updates & Patch Playbook Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!scanResult) setScanResult(SAMPLE_SCAN_RESULT);
+                setActiveTab('updates');
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all border shrink-0 cursor-pointer shadow-sm ${
+                activeTab === 'updates' && scanResult
+                  ? 'bg-amber-950 text-amber-300 border-amber-500 ring-1 ring-amber-500/50'
+                  : 'bg-amber-950/70 text-amber-300 border-amber-700/80 hover:bg-amber-900/80'
+              }`}
+            >
+              <PackageCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Updates ({scanResult?.softwareUpdates?.outdatedCount ?? 4})</span>
+            </button>
+
+            {/* Alert Admin Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!scanResult) setScanResult(SAMPLE_SCAN_RESULT);
+                setIsAlertModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap bg-rose-950 text-rose-300 border border-rose-600 hover:bg-rose-900 transition-all shrink-0 cursor-pointer animate-pulse shadow-sm"
+            >
+              <BellRing className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <span>Alert Admin</span>
+            </button>
+
+            {/* Core Audit Tabs */}
+            {[
+              { id: 'overview', label: t.navOverview },
+              { id: 'flaws', label: `${t.navFlaws} (${scanResult?.flaws.length ?? 8})` },
+              { id: 'headers', label: t.navHeaders },
+              { id: 'ssl_dns', label: t.navSslDns },
+              { id: 'tech_ports', label: t.navTechPorts },
+              { id: 'subdomains', label: `${t.navSubdomains} (${scanResult?.subdomains?.totalFound ?? 6})` },
+              { id: 'ai_report', label: t.navExecutive },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  if (!scanResult) setScanResult(SAMPLE_SCAN_RESULT);
+                  setActiveTab(tab.id);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium whitespace-nowrap transition-colors border shrink-0 cursor-pointer ${
+                  activeTab === tab.id && scanResult
+                    ? 'bg-slate-800 text-cyan-300 border-cyan-500/60 shadow-sm'
+                    : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Error Notification */}
         {error && (
           <div className="max-w-4xl mx-auto mb-6 p-4 rounded-xl bg-rose-950/40 border border-rose-800/80 text-rose-300 text-xs sm:text-sm flex items-start gap-3">
